@@ -1,0 +1,3 @@
+LIBRARY NL_IO
+EXPORTS
+    write::0=?override_0_char@write@@YAXAEAUThread@runtime@ll@pnl@@@Z @1

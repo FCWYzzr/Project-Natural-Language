@@ -1,0 +1,602 @@
+grammar opcode;
+
+
+
+// opcodes
+
+WASTE_BOOL
+    : 'WASTE_BOOL'
+    ;
+WASTE_CHAR
+    : 'WASTE_CHAR'
+    ;
+WASTE_BYTE
+    : 'WASTE_BYTE'
+    ;
+WASTE_INT
+    : 'WASTE_INT'
+    ;
+WASTE_LONG
+    : 'WASTE_LONG'
+    ;
+WASTE_FLOAT
+    : 'WASTE_FLOAT'
+    ;
+WASTE_DOUBLE
+    : 'WASTE_DOUBLE'
+    ;
+WASTE_OBJ
+    : 'WASTE_OBJ'
+    ;
+UNPACK
+    : 'UNPACK'
+    ;
+CAST_C2I
+    : 'CAST_C2I'
+    ;
+CAST_B2I
+    : 'CAST_B2I'
+    ;
+CAST_I2B
+    : 'CAST_I2B'
+    ;
+CAST_I2C
+    : 'CAST_I2C'
+    ;
+CAST_I2L
+    : 'CAST_I2L'
+    ;
+CAST_I2F
+    : 'CAST_I2F'
+    ;
+CAST_I2D
+    : 'CAST_I2D'
+    ;
+CAST_L2I
+    : 'CAST_L2I'
+    ;
+CAST_L2F
+    : 'CAST_L2F'
+    ;
+CAST_L2D
+    : 'CAST_L2D'
+    ;
+CAST_F2I
+    : 'CAST_F2I'
+    ;
+CAST_F2L
+    : 'CAST_F2L'
+    ;
+CAST_F2D
+    : 'CAST_F2D'
+    ;
+CAST_D2I
+    : 'CAST_D2I'
+    ;
+CAST_D2L
+    : 'CAST_D2L'
+    ;
+CAST_D2F
+    : 'CAST_D2F'
+    ;
+CMP_INT
+    : 'CMP_INT'
+    ;
+CMP_LONG
+    : 'CMP_LONG'
+    ;
+CMP_FLOAT
+    : 'CMP_FLOAT'
+    ;
+CMP_DOUBLE
+    : 'CMP_DOUBLE'
+    ;
+ADD_INT
+    : 'ADD_INT'
+    ;
+ADD_LONG
+    : 'ADD_LONG'
+    ;
+ADD_FLOAT
+    : 'ADD_FLOAT'
+    ;
+ADD_DOUBLE
+    : 'ADD_DOUBLE'
+    ;
+SUB_INT
+    : 'SUB_INT'
+    ;
+SUB_LONG
+    : 'SUB_LONG'
+    ;
+SUB_FLOAT
+    : 'SUB_FLOAT'
+    ;
+SUB_DOUBLE
+    : 'SUB_DOUBLE'
+    ;
+MUL_INT
+    : 'MUL_INT'
+    ;
+MUL_LONG
+    : 'MUL_LONG'
+    ;
+MUL_FLOAT
+    : 'MUL_FLOAT'
+    ;
+MUL_DOUBLE
+    : 'MUL_DOUBLE'
+    ;
+DIV_INT
+    : 'DIV_INT'
+    ;
+DIV_LONG
+    : 'DIV_LONG'
+    ;
+DIV_FLOAT
+    : 'DIV_FLOAT'
+    ;
+DIV_DOUBLE
+    : 'DIV_DOUBLE'
+    ;
+REM_I
+    : 'REM_I'
+    ;
+NEG_INT
+    : 'NEG_INT'
+    ;
+NEG_LONG
+    : 'NEG_LONG'
+    ;
+NEG_FLOAT
+    : 'NEG_FLOAT'
+    ;
+NEG_DOUBLE
+    : 'NEG_DOUBLE'
+    ;
+SHL_INT
+    : 'SHL_INT'
+    ;
+SHL_LONG
+    : 'SHL_LONG'
+    ;
+SHR_INT
+    : 'SHR_INT'
+    ;
+SHR_LONG
+    : 'SHR_LONG'
+    ;
+USHR_INT
+    : 'USHR_INT'
+    ;
+USHR_LONG
+    : 'USHR_LONG'
+    ;
+BIT_AND_INT
+    : 'BIT_AND_INT'
+    ;
+BIT_AND_LONG
+    : 'BIT_AND_LONG'
+    ;
+BIT_OR_INT
+    : 'BIT_OR_INT'
+    ;
+BIT_OR_LONG
+    : 'BIT_OR_LONG'
+    ;
+BIT_XOR_INT
+    : 'BIT_XOR_INT'
+    ;
+BIT_XOR_LONG
+    : 'BIT_XOR_LONG'
+    ;
+INVOKE_TOP
+    : 'INVOKE_TOP'
+    ;
+RETURN_UNIT
+    : 'RETURN_UNIT'
+    ;
+RETURN_BOOL
+    : 'RETURN_BOOL'
+    ;
+RETURN_CHAR
+    : 'RETURN_CHAR'
+    ;
+RETURN_BYTE
+    : 'RETURN_BYTE'
+    ;
+RETURN_INT
+    : 'RETURN_INT'
+    ;
+RETURN_LONG
+    : 'RETURN_LONG'
+    ;
+RETURN_FLOAT
+    : 'RETURN_FLOAT'
+    ;
+RETURN_DOUBLE
+    : 'RETURN_DOUBLE'
+    ;
+RETURN_OBJ
+    : 'RETURN_OBJ'
+    ;
+DESTROY_REF
+    : 'DESTROY_REF'
+    ;
+ARG_FLAG
+    : 'ARG_FLAG'
+    ;
+JUMP
+    : 'JUMP'
+    ;
+JUMP_IF_ZERO
+    : 'JUMP_IF_ZERO'
+    ;
+JUMP_IF_NOT_ZERO
+    : 'JUMP_IF_NOT_ZERO'
+    ;
+JUMP_IF_POSITIVE
+    : 'JUMP_IF_POSITIVE'
+    ;
+JUMP_IF_NEGATIVE
+    : 'JUMP_IF_NEGATIVE'
+    ;
+CONST_V_BOOL
+    : 'CONST_V_BOOL'
+    ;
+CONST_V_BYTE
+    : 'CONST_V_BYTE'
+    ;
+CONST_CHAR
+    : 'CONST_CHAR'
+    ;
+CONST_INT
+    : 'CONST_INT'
+    ;
+CONST_LONG
+    : 'CONST_LONG'
+    ;
+CONST_FLOAT
+    : 'CONST_FLOAT'
+    ;
+CONST_DOUBLE
+    : 'CONST_DOUBLE'
+    ;
+CONST_OBJ
+    : 'CONST_OBJ'
+    ;
+LOAD_BOOL
+    : 'LOAD_BOOL'
+    ;
+LOAD_CHAR
+    : 'LOAD_CHAR'
+    ;
+LOAD_BYTE
+    : 'LOAD_BYTE'
+    ;
+LOAD_INT
+    : 'LOAD_INT'
+    ;
+LOAD_LONG
+    : 'LOAD_LONG'
+    ;
+LOAD_FLOAT
+    : 'LOAD_FLOAT'
+    ;
+LOAD_DOUBLE
+    : 'LOAD_DOUBLE'
+    ;
+LOAD_OBJ
+    : 'LOAD_OBJ'
+    ;
+STORE_BOOL
+    : 'STORE_BOOL'
+    ;
+STORE_CHAR
+    : 'STORE_CHAR'
+    ;
+STORE_BYTE
+    : 'STORE_BYTE'
+    ;
+STORE_INT
+    : 'STORE_INT'
+    ;
+STORE_LONG
+    : 'STORE_LONG'
+    ;
+STORE_FLOAT
+    : 'STORE_FLOAT'
+    ;
+STORE_DOUBLE
+    : 'STORE_DOUBLE'
+    ;
+STORE_OBJ
+    : 'STORE_OBJ'
+    ;
+IMPORT_BOOL
+    : 'IMPORT_BOOL'
+    ;
+IMPORT_CHAR
+    : 'IMPORT_CHAR'
+    ;
+IMPORT_BYTE
+    : 'IMPORT_BYTE'
+    ;
+IMPORT_INT
+    : 'IMPORT_INT'
+    ;
+IMPORT_LONG
+    : 'IMPORT_LONG'
+    ;
+IMPORT_FLOAT
+    : 'IMPORT_FLOAT'
+    ;
+IMPORT_DOUBLE
+    : 'IMPORT_DOUBLE'
+    ;
+IMPORT_OBJ
+    : 'IMPORT_OBJ'
+    ;
+MEMBER_LOAD_BOOL
+    : 'MEMBER_LOAD_BOOL'
+    ;
+MEMBER_LOAD_CHAR
+    : 'MEMBER_LOAD_CHAR'
+    ;
+MEMBER_LOAD_BYTE
+    : 'MEMBER_LOAD_BYTE'
+    ;
+MEMBER_LOAD_INT
+    : 'MEMBER_LOAD_INT'
+    ;
+MEMBER_LOAD_LONG
+    : 'MEMBER_LOAD_LONG'
+    ;
+MEMBER_LOAD_FLOAT
+    : 'MEMBER_LOAD_FLOAT'
+    ;
+MEMBER_LOAD_DOUBLE
+    : 'MEMBER_LOAD_DOUBLE'
+    ;
+MEMBER_LOAD_OBJ
+    : 'MEMBER_LOAD_OBJ'
+    ;
+MEMBER_STORE_BOOL
+    : 'MEMBER_STORE_BOOL'
+    ;
+MEMBER_STORE_CHAR
+    : 'MEMBER_STORE_CHAR'
+    ;
+MEMBER_STORE_BYTE
+    : 'MEMBER_STORE_BYTE'
+    ;
+MEMBER_STORE_INT
+    : 'MEMBER_STORE_INT'
+    ;
+MEMBER_STORE_LONG
+    : 'MEMBER_STORE_LONG'
+    ;
+MEMBER_STORE_FLOAT
+    : 'MEMBER_STORE_FLOAT'
+    ;
+MEMBER_STORE_DOUBLE
+    : 'MEMBER_STORE_DOUBLE'
+    ;
+MEMBER_STORE_OBJ
+    : 'MEMBER_STORE_OBJ'
+    ;
+STATIC_MEMBER_LOAD_BOOL
+    : 'STATIC_MEMBER_LOAD_BOOL'
+    ;
+STATIC_MEMBER_LOAD_CHAR
+    : 'STATIC_MEMBER_LOAD_CHAR'
+    ;
+STATIC_MEMBER_LOAD_BYTE
+    : 'STATIC_MEMBER_LOAD_BYTE'
+    ;
+STATIC_MEMBER_LOAD_INT
+    : 'STATIC_MEMBER_LOAD_INT'
+    ;
+STATIC_MEMBER_LOAD_LONG
+    : 'STATIC_MEMBER_LOAD_LONG'
+    ;
+STATIC_MEMBER_LOAD_FLOAT
+    : 'STATIC_MEMBER_LOAD_FLOAT'
+    ;
+STATIC_MEMBER_LOAD_DOUBLE
+    : 'STATIC_MEMBER_LOAD_DOUBLE'
+    ;
+STATIC_MEMBER_LOAD_OBJ
+    : 'STATIC_MEMBER_LOAD_OBJ'
+    ;
+STATIC_MEMBER_STORE_BOOL
+    : 'STATIC_MEMBER_STORE_BOOL'
+    ;
+STATIC_MEMBER_STORE_CHAR
+    : 'STATIC_MEMBER_STORE_CHAR'
+    ;
+STATIC_MEMBER_STORE_BYTE
+    : 'STATIC_MEMBER_STORE_BYTE'
+    ;
+STATIC_MEMBER_STORE_INT
+    : 'STATIC_MEMBER_STORE_INT'
+    ;
+STATIC_MEMBER_STORE_LONG
+    : 'STATIC_MEMBER_STORE_LONG'
+    ;
+STATIC_MEMBER_STORE_FLOAT
+    : 'STATIC_MEMBER_STORE_FLOAT'
+    ;
+STATIC_MEMBER_STORE_DOUBLE
+    : 'STATIC_MEMBER_STORE_DOUBLE'
+    ;
+STATIC_MEMBER_STORE_OBJ
+    : 'STATIC_MEMBER_STORE_OBJ'
+    ;
+INVOKE_OVERRIDE
+    : 'INVOKE_OVERRIDE'
+    ;
+METHOD_PUSH
+    : 'METHOD_PUSH'
+    ;
+METHOD_CALL
+    : 'METHOD_CALL'
+    ;
+INSTATE_REF
+    : 'INSTATE_REF'
+    ;
+
+
+BARE_NAME
+    : (~["'<>[\](){} \r\b\t\n])+
+    ;
+
+
+op  :WASTE_BOOL
+    | WASTE_CHAR
+    | WASTE_BYTE
+    | WASTE_INT
+    | WASTE_LONG
+    | WASTE_FLOAT
+    | WASTE_DOUBLE
+    | WASTE_OBJ
+    | UNPACK
+    | CAST_C2I
+    | CAST_B2I
+    | CAST_I2B
+    | CAST_I2C
+    | CAST_I2L
+    | CAST_I2F
+    | CAST_I2D
+    | CAST_L2I
+    | CAST_L2F
+    | CAST_L2D
+    | CAST_F2I
+    | CAST_F2L
+    | CAST_F2D
+    | CAST_D2I
+    | CAST_D2L
+    | CAST_D2F
+    | CMP_INT
+    | CMP_LONG
+    | CMP_FLOAT
+    | CMP_DOUBLE
+    | ADD_INT
+    | ADD_LONG
+    | ADD_FLOAT
+    | ADD_DOUBLE
+    | SUB_INT
+    | SUB_LONG
+    | SUB_FLOAT
+    | SUB_DOUBLE
+    | MUL_INT
+    | MUL_LONG
+    | MUL_FLOAT
+    | MUL_DOUBLE
+    | DIV_INT
+    | DIV_LONG
+    | DIV_FLOAT
+    | DIV_DOUBLE
+    | REM_I
+    | NEG_INT
+    | NEG_LONG
+    | NEG_FLOAT
+    | NEG_DOUBLE
+    | SHL_INT
+    | SHL_LONG
+    | SHR_INT
+    | SHR_LONG
+    | USHR_INT
+    | USHR_LONG
+    | BIT_AND_INT
+    | BIT_AND_LONG
+    | BIT_OR_INT
+    | BIT_OR_LONG
+    | BIT_XOR_INT
+    | BIT_XOR_LONG
+    | INVOKE_TOP
+    | RETURN_UNIT
+    | RETURN_BOOL
+    | RETURN_CHAR
+    | RETURN_BYTE
+    | RETURN_INT
+    | RETURN_LONG
+    | RETURN_FLOAT
+    | RETURN_DOUBLE
+    | RETURN_OBJ
+    | DESTROY_REF
+    | ARG_FLAG
+    | JUMP
+    | JUMP_IF_ZERO
+    | JUMP_IF_NOT_ZERO
+    | JUMP_IF_POSITIVE
+    | JUMP_IF_NEGATIVE
+    | CONST_V_BOOL
+    | CONST_V_BYTE
+    | CONST_CHAR
+    | CONST_INT
+    | CONST_LONG
+    | CONST_FLOAT
+    | CONST_DOUBLE
+    | CONST_OBJ
+    | LOAD_BOOL
+    | LOAD_CHAR
+    | LOAD_BYTE
+    | LOAD_INT
+    | LOAD_LONG
+    | LOAD_FLOAT
+    | LOAD_DOUBLE
+    | LOAD_OBJ
+    | STORE_BOOL
+    | STORE_CHAR
+    | STORE_BYTE
+    | STORE_INT
+    | STORE_LONG
+    | STORE_FLOAT
+    | STORE_DOUBLE
+    | STORE_OBJ
+    | IMPORT_BOOL
+    | IMPORT_CHAR
+    | IMPORT_BYTE
+    | IMPORT_INT
+    | IMPORT_LONG
+    | IMPORT_FLOAT
+    | IMPORT_DOUBLE
+    | IMPORT_OBJ
+    | MEMBER_LOAD_BOOL
+    | MEMBER_LOAD_CHAR
+    | MEMBER_LOAD_BYTE
+    | MEMBER_LOAD_INT
+    | MEMBER_LOAD_LONG
+    | MEMBER_LOAD_FLOAT
+    | MEMBER_LOAD_DOUBLE
+    | MEMBER_LOAD_OBJ
+    | MEMBER_STORE_BOOL
+    | MEMBER_STORE_CHAR
+    | MEMBER_STORE_BYTE
+    | MEMBER_STORE_INT
+    | MEMBER_STORE_LONG
+    | MEMBER_STORE_FLOAT
+    | MEMBER_STORE_DOUBLE
+    | MEMBER_STORE_OBJ
+    | STATIC_MEMBER_LOAD_BOOL
+    | STATIC_MEMBER_LOAD_CHAR
+    | STATIC_MEMBER_LOAD_BYTE
+    | STATIC_MEMBER_LOAD_INT
+    | STATIC_MEMBER_LOAD_LONG
+    | STATIC_MEMBER_LOAD_FLOAT
+    | STATIC_MEMBER_LOAD_DOUBLE
+    | STATIC_MEMBER_LOAD_OBJ
+    | STATIC_MEMBER_STORE_BOOL
+    | STATIC_MEMBER_STORE_CHAR
+    | STATIC_MEMBER_STORE_BYTE
+    | STATIC_MEMBER_STORE_INT
+    | STATIC_MEMBER_STORE_LONG
+    | STATIC_MEMBER_STORE_FLOAT
+    | STATIC_MEMBER_STORE_DOUBLE
+    | STATIC_MEMBER_STORE_OBJ
+    | INVOKE_OVERRIDE
+    | METHOD_PUSH
+    | METHOD_CALL
+    | INSTATE_REF
+    ;

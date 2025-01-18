@@ -1,0 +1,44 @@
+LIBRARY NLCore
+EXPORTS
+    RTUObject::()=?maker@RTUObject@@YAXAEAUThread@runtime@ll@pnl@@@Z            @1
+    RTUObject::~()=?collector@RTUObject@@YAXAEAUThread@runtime@ll@pnl@@@Z       @2
+    RTTObject::()=?maker@RTTObject@@YAXAEAUThread@runtime@ll@pnl@@@Z            @3
+    RTTObject::~()=?collector@RTTObject@@YAXAEAUThread@runtime@ll@pnl@@@Z       @4
+    Type::()=?maker@Type@@YAXAEAUThread@runtime@ll@pnl@@@Z                      @5
+    Type::~()=?collector@Type@@YAXAEAUThread@runtime@ll@pnl@@@Z                 @6
+    ArrayType::()=?maker@ArrayType@@YAXAEAUThread@runtime@ll@pnl@@@Z            @7
+    ArrayType::~()=?collector@ArrayType@@YAXAEAUThread@runtime@ll@pnl@@@Z       @8
+    ArrayType::constructor=?generic_constructor@ArrayType@@YAXAEAUThread@runtime@ll@pnl@@@Z            @9
+    ArrayType::destructor=?generic_destructor@ArrayType@@YAXAEAUThread@runtime@ll@pnl@@@Z       @10
+    NamedType::()=?maker@NamedType@@YAXAEAUThread@runtime@ll@pnl@@@Z            @11
+    NamedType::~()=?collector@NamedType@@YAXAEAUThread@runtime@ll@pnl@@@Z       @12
+    MemberInfo::()=?maker@MemberInfo@@YAXAEAUThread@runtime@ll@pnl@@@Z          @13
+    MemberInfo::~()=?collector@MemberInfo@@YAXAEAUThread@runtime@ll@pnl@@@Z     @14
+    Class::()=?maker@Class@@YAXAEAUThread@runtime@ll@pnl@@@Z                    @15
+    Class::~()=?collector@Class@@YAXAEAUThread@runtime@ll@pnl@@@Z               @16
+    FOverride::()=?maker@FOverride@@YAXAEAUThread@runtime@ll@pnl@@@Z            @17
+    FOverride::~()=?collector@FOverride@@YAXAEAUThread@runtime@ll@pnl@@@Z       @18
+    FFamily::()=?maker@FFamily@@YAXAEAUThread@runtime@ll@pnl@@@Z                @19
+    FFamily::~()=?collector@FFamily@@YAXAEAUThread@runtime@ll@pnl@@@Z           @20
+    unit::()=?maker@Unit@@YAXAEAUThread@runtime@ll@pnl@@@Z                      @21
+    unit::~()=?collector@Unit@@YAXAEAUThread@runtime@ll@pnl@@@Z                 @22
+    bool::()=?maker@Bool@@YAXAEAUThread@runtime@ll@pnl@@@Z                      @23
+    bool::~()=?collector@Bool@@YAXAEAUThread@runtime@ll@pnl@@@Z                 @24
+    byte::()=?maker@Byte@@YAXAEAUThread@runtime@ll@pnl@@@Z                      @25
+    byte::~()=?collector@Byte@@YAXAEAUThread@runtime@ll@pnl@@@Z                 @26
+    char::()=?maker@Char@@YAXAEAUThread@runtime@ll@pnl@@@Z                      @27
+    char::~()=?collector@Char@@YAXAEAUThread@runtime@ll@pnl@@@Z                 @28
+    int::()=?maker@Int@@YAXAEAUThread@runtime@ll@pnl@@@Z                        @29
+    int::~()=?collector@Int@@YAXAEAUThread@runtime@ll@pnl@@@Z                   @30
+    long::()=?maker@Long@@YAXAEAUThread@runtime@ll@pnl@@@Z                      @31
+    long::~()=?collector@Long@@YAXAEAUThread@runtime@ll@pnl@@@Z                 @32
+    float::()=?maker@Float@@YAXAEAUThread@runtime@ll@pnl@@@Z                    @33
+    float::~()=?collector@Float@@YAXAEAUThread@runtime@ll@pnl@@@Z               @34
+    double::()=?maker@Double@@YAXAEAUThread@runtime@ll@pnl@@@Z                  @35
+    double::~()=?collector@Double@@YAXAEAUThread@runtime@ll@pnl@@@Z             @36
+    address::()=?maker@Address@@YAXAEAUThread@runtime@ll@pnl@@@Z                @37
+    address::~()=?collector@Address@@YAXAEAUThread@runtime@ll@pnl@@@Z           @38
+    instruction::()=?maker@Instruction@@YAXAEAUThread@runtime@ll@pnl@@@Z        @39
+    instruction::~()=?collector@Instruction@@YAXAEAUThread@runtime@ll@pnl@@@Z   @40
+
+

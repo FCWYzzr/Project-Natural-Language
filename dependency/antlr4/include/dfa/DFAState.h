@@ -69,7 +69,7 @@ namespace dfa {
     /// if accept state, what ttype do we match or alt do we predict?
     /// This is set to <seealso cref="ATN#INVALID_ALT_NUMBER"/> when <seealso cref="#predicates"/>{@code !=null} or
     /// <seealso cref="#requiresFullContext"/>.
-    size_t prediction = 0;
+    std::size_t prediction = 0;
 
     Ref<const atn::LexerActionExecutor> lexerActionExecutor;
 
@@ -113,7 +113,7 @@ namespace dfa {
     /// </summary>
     std::set<size_t> getAltSet() const;
 
-    size_t hashCode() const;
+    std::size_t hashCode() const;
 
     /// Two DFAState instances are equal if their ATN configuration sets
     /// are the same. This method is used to see if a state already exists.
@@ -146,7 +146,7 @@ namespace std {
 
   template <>
   struct hash<::antlr4::dfa::DFAState> {
-    size_t operator()(const ::antlr4::dfa::DFAState &dfaState) const {
+    std::size_t operator()(const ::antlr4::dfa::DFAState &dfaState) const {
       return dfaState.hashCode();
     }
   };

@@ -40,7 +40,7 @@ namespace atn {
     /// <param name="startIndex"> The start index for the current prediction </param>
     /// <param name="stopIndex"> The index at which the context sensitivity was
     /// identified during full-context prediction </param>
-    ContextSensitivityInfo(size_t decision, ATNConfigSet *configs, TokenStream *input, size_t startIndex, size_t stopIndex);
+    ContextSensitivityInfo(size_t decision, ATNConfigSet *configs, TokenStream *input, std::size_t startIndex, std::size_t stopIndex);
   };
 
 } // namespace atn

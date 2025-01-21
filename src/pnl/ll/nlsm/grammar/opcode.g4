@@ -447,10 +447,6 @@ INSTATE_REF
     ;
 
 
-BARE_NAME
-    : (~["'<>[\](){} \r\b\t\n])+
-    ;
-
 
 op  :WASTE_BOOL
     | WASTE_CHAR

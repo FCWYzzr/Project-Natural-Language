@@ -15,7 +15,7 @@ namespace atn {
   public:
     explicit ProfilingATNSimulator(Parser *parser);
 
-    virtual size_t adaptivePredict(TokenStream *input, size_t decision, ParserRuleContext *outerContext) override;
+    virtual std::size_t adaptivePredict(TokenStream *input, std::size_t decision, ParserRuleContext *outerContext) override;
 
     virtual std::vector<DecisionInfo> getDecisionInfo() const;
     virtual dfa::DFAState* getCurrentState() const;
@@ -26,7 +26,7 @@ namespace atn {
     int _sllStopIndex = 0;
     int _llStopIndex = 0;
 
-    size_t _currentDecision = 0;
+    std::size_t _currentDecision = 0;
     dfa::DFAState *_currentState;
 
     /// <summary>
@@ -41,18 +41,18 @@ namespace atn {
     ///  It may in fact still be a context sensitivity but we don't know by looking at the
     ///  minimum alternatives for the current input.
     /// </summary>
-    size_t conflictingAltResolvedBySLL = 0;
+    std::size_t conflictingAltResolvedBySLL = 0;
 
-    virtual dfa::DFAState* getExistingTargetState(dfa::DFAState *previousD, size_t t) override;
-    virtual dfa::DFAState* computeTargetState(dfa::DFA &dfa, dfa::DFAState *previousD, size_t t) override;
-    virtual std::unique_ptr<ATNConfigSet> computeReachSet(ATNConfigSet *closure, size_t t, bool fullCtx) override;
+    virtual dfa::DFAState* getExistingTargetState(dfa::DFAState *previousD, std::size_t t) override;
+    virtual dfa::DFAState* computeTargetState(dfa::DFA &dfa, dfa::DFAState *previousD, std::size_t t) override;
+    virtual std::unique_ptr<ATNConfigSet> computeReachSet(ATNConfigSet *closure, std::size_t t, bool fullCtx) override;
     virtual bool evalSemanticContext(Ref<const SemanticContext> const& pred, ParserRuleContext *parserCallStack,
-                                     size_t alt, bool fullCtx) override;
+                                     std::size_t alt, bool fullCtx) override;
     virtual void reportAttemptingFullContext(dfa::DFA &dfa, const antlrcpp::BitSet &conflictingAlts, ATNConfigSet *configs,
-                                             size_t startIndex, size_t stopIndex) override;
-    virtual void reportContextSensitivity(dfa::DFA &dfa, size_t prediction, ATNConfigSet *configs,
-                                          size_t startIndex, size_t stopIndex) override;
-    virtual void reportAmbiguity(dfa::DFA &dfa, dfa::DFAState *D, size_t startIndex, size_t stopIndex, bool exact,
+                                             std::size_t startIndex, std::size_t stopIndex) override;
+    virtual void reportContextSensitivity(dfa::DFA &dfa, std::size_t prediction, ATNConfigSet *configs,
+                                          std::size_t startIndex, std::size_t stopIndex) override;
+    virtual void reportAmbiguity(dfa::DFA &dfa, dfa::DFAState *D, std::size_t startIndex, std::size_t stopIndex, bool exact,
                                  const antlrcpp::BitSet &ambigAlts, ATNConfigSet *configs) override;
   };
 

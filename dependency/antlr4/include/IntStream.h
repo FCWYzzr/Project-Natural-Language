@@ -27,12 +27,12 @@ namespace antlr4 {
   /// </summary>
   class ANTLR4CPP_PUBLIC IntStream {
   public:
-    static constexpr size_t EOF = std::numeric_limits<size_t>::max();
+    static constexpr std::size_t EOF = std::numeric_limits<size_t>::max();
 
     /// The value returned by <seealso cref="#LA LA()"/> when the end of the stream is
     /// reached.
     /// No explicit EOF definition. We got EOF on all platforms.
-    //static const size_t _EOF = std::ios::eofbit;
+    //static const std::size_t _EOF = std::ios::eofbit;
 
     /// <summary>
     /// The value returned by <seealso cref="#getSourceName"/> when the actual name of the
@@ -98,7 +98,7 @@ namespace antlr4 {
     /// </summary>
     /// <exception cref="UnsupportedOperationException"> if the stream does not support
     /// retrieving the value of the specified symbol </exception>
-    virtual size_t LA(ssize_t i) = 0;
+    virtual std::size_t LA(ssize_t i) = 0;
 
     /// <summary>
     /// A mark provides a guarantee that <seealso cref="#seek seek()"/> operations will be
@@ -168,7 +168,7 @@ namespace antlr4 {
     /// <seealso cref="IntStream initializing method"/> has occurred after this stream was
     /// constructed.
     /// </summary>
-    virtual size_t index() = 0;
+    virtual std::size_t index() = 0;
 
     /// <summary>
     /// Set the input cursor to the position indicated by {@code index}. If the
@@ -205,7 +205,7 @@ namespace antlr4 {
     /// </summary>
     /// <exception cref="UnsupportedOperationException"> if the size of the stream is
     /// unknown. </exception>
-    virtual size_t size() = 0;
+    virtual std::size_t size() = 0;
 
     /// <summary>
     /// Gets the name of the underlying symbol source. This method returns a

@@ -16,13 +16,13 @@ namespace atn {
 
     static bool is(const Transition *transition) { return transition != nullptr && is(*transition); }
 
-    const size_t from;
-    const size_t to;
+    const std::size_t from;
+    const std::size_t to;
 
-    RangeTransition(ATNState *target, size_t from, size_t to);
+    RangeTransition(ATNState *target, std::size_t from, std::size_t to);
 
     virtual misc::IntervalSet label() const override;
-    virtual bool matches(size_t symbol, size_t minVocabSymbol, size_t maxVocabSymbol) const override;
+    virtual bool matches(size_t symbol, std::size_t minVocabSymbol, std::size_t maxVocabSymbol) const override;
 
     virtual std::string toString() const override;
   };

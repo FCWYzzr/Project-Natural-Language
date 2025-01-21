@@ -59,7 +59,7 @@ namespace atn {
      */
     virtual Ref<const SemanticContext> evalPrecedence(Recognizer *parser, RuleContext *parserCallStack) const;
 
-    virtual size_t hashCode() const = 0;
+    virtual std::size_t hashCode() const = 0;
 
     virtual bool equals(const SemanticContext &other) const = 0;
 
@@ -107,14 +107,14 @@ namespace atn {
 
     static bool is(const SemanticContext *semanticContext) { return semanticContext != nullptr && is(*semanticContext); }
 
-    const size_t ruleIndex;
-    const size_t predIndex;
+    const std::size_t ruleIndex;
+    const std::size_t predIndex;
     const bool isCtxDependent; // e.g., $i ref in pred
 
-    Predicate(size_t ruleIndex, size_t predIndex, bool isCtxDependent);
+    Predicate(size_t ruleIndex, std::size_t predIndex, bool isCtxDependent);
 
     bool eval(Recognizer *parser, RuleContext *parserCallStack) const override;
-    size_t hashCode() const override;
+    std::size_t hashCode() const override;
     bool equals(const SemanticContext &other) const override;
     std::string toString() const override;
   };
@@ -131,7 +131,7 @@ namespace atn {
 
     bool eval(Recognizer *parser, RuleContext *parserCallStack) const override;
     Ref<const SemanticContext> evalPrecedence(Recognizer *parser, RuleContext *parserCallStack) const override;
-    size_t hashCode() const override;
+    std::size_t hashCode() const override;
     bool equals(const SemanticContext &other) const override;
     std::string toString() const override;
   };
@@ -186,7 +186,7 @@ namespace atn {
      */
     bool eval(Recognizer *parser, RuleContext *parserCallStack) const override;
     Ref<const SemanticContext> evalPrecedence(Recognizer *parser, RuleContext *parserCallStack) const override;
-    size_t hashCode() const override;
+    std::size_t hashCode() const override;
     bool equals(const SemanticContext &other) const override;
     std::string toString() const override;
 
@@ -214,7 +214,7 @@ namespace atn {
      */
     bool eval(Recognizer *parser, RuleContext *parserCallStack) const override;
     Ref<const SemanticContext> evalPrecedence(Recognizer *parser, RuleContext *parserCallStack) const override;
-    size_t hashCode() const override;
+    std::size_t hashCode() const override;
     bool equals(const SemanticContext &other) const override;
     std::string toString() const override;
 
@@ -229,7 +229,7 @@ namespace std {
 
   template <>
   struct hash<::antlr4::atn::SemanticContext> {
-    size_t operator()(const ::antlr4::atn::SemanticContext &semanticContext) const {
+    std::size_t operator()(const ::antlr4::atn::SemanticContext &semanticContext) const {
       return semanticContext.hashCode();
     }
   };

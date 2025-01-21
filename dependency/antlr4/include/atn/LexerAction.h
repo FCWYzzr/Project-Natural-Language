@@ -57,7 +57,7 @@ namespace atn {
     /// <param name="lexer"> The lexer instance. </param>
     virtual void execute(Lexer *lexer) const = 0;
 
-    size_t hashCode() const;
+    std::size_t hashCode() const;
 
     virtual bool equals(const LexerAction &other) const = 0;
 
@@ -67,9 +67,9 @@ namespace atn {
     LexerAction(LexerActionType actionType, bool positionDependent)
         : _actionType(actionType), _hashCode(0), _positionDependent(positionDependent) {}
 
-    virtual size_t hashCodeImpl() const = 0;
+    virtual std::size_t hashCodeImpl() const = 0;
 
-    size_t cachedHashCode() const { return _hashCode.load(std::memory_order_relaxed); }
+    std::size_t cachedHashCode() const { return _hashCode.load(std::memory_order_relaxed); }
 
   private:
     const LexerActionType _actionType;
@@ -92,7 +92,7 @@ namespace std {
 
   template <>
   struct hash<::antlr4::atn::LexerAction> {
-    size_t operator()(const ::antlr4::atn::LexerAction &lexerAction) const {
+    std::size_t operator()(const ::antlr4::atn::LexerAction &lexerAction) const {
       return lexerAction.hashCode();
     }
   };

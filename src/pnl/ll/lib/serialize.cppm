@@ -2,22 +2,16 @@
 // Created by FCWY on 24-12-28.
 //
 // ReSharper disable CppNonExplicitConvertingConstructor
+module;
+#include "project-nl.h"
+
 export module pnl.ll.serialize;
 import pnl.ll.string;
 import pnl.ll.base;
 import pnl.ll.runtime;
 import pnl.ll.comtime;
-import pnl.ll.meta_prog;
 
-import <unordered_map>;
-import <iostream>;
-import <ranges>;
-import <unordered_set>;
-import <type_traits>;
-import <concepts>;
-import <memory>;
-import <utility>;
-import <variant>;
+
 
 export namespace pnl::ll::inline serialize::universal_binary{
 
@@ -49,12 +43,12 @@ export namespace pnl::ll::inline serialize::universal_binary{
     };
 
     template<typename T>
-    IStream& operator >> (IStream& is, const Serializer<T>& obj) noexcept {
+    BIStream& operator >> (BIStream& is, const Serializer<T>& obj) noexcept {
         obj.deserialize(is);
         return is;
     }
     template<typename T>
-    OStream& operator << (OStream& os, const Serializer<T>& obj) noexcept {
+    BOStream& operator << (BOStream& os, const Serializer<T>& obj) noexcept {
         obj.serialize(os);
         return os;
     }
@@ -74,10 +68,10 @@ export namespace pnl::ll::inline serialize::universal_binary{
         Serializer(value_type &bind) noexcept:
             bind(bind) {}
 
-        void serialize(OStream& os) const noexcept {
+        void serialize(BOStream& os) const noexcept {
             os << Serializer<D>{bind};
         }
-        void deserialize(IStream& is) const noexcept {
+        void deserialize(BIStream& is) const noexcept {
             is >> Serializer<D>{bind};
         }
     };
@@ -95,7 +89,7 @@ export namespace pnl::ll::inline serialize::universal_binary{
             bind(bind) {}
 
         // enable const or not
-        void serialize(OStream& os) const noexcept {
+        void serialize(BOStream& os) const noexcept {
             UByte repr[sizeof(RInt)]{};
             auto value = reinterpret_cast<const RInt&>(bind);
             int start, step, stop;
@@ -118,7 +112,7 @@ export namespace pnl::ll::inline serialize::universal_binary{
         }
 
         // enable only non-const
-        void deserialize(IStream& is) const noexcept {
+        void deserialize(BIStream& is) const noexcept {
             if constexpr (std::is_const_v<T>)
                 std::unreachable();
             UByte repr[sizeof(RInt)]{};
@@ -158,10 +152,10 @@ export namespace pnl::ll::inline serialize::universal_binary{
         Serializer(value_type& bind) noexcept:
             bind(bind) {}
 
-        void serialize(OStream& os) const noexcept {
+        void serialize(BOStream& os) const noexcept {
             os << Serializer<const RInt>{static_cast<RInt>(bind)};
         }
-        void deserialize(IStream& is) const noexcept {
+        void deserialize(BIStream& is) const noexcept {
             RInt cache;
             is >> Serializer<RInt>{cache};
             bind = static_cast<E>(cache);
@@ -180,10 +174,10 @@ export namespace pnl::ll::inline serialize::universal_binary{
         Serializer(value_type& bind) noexcept:
             bind(bind) {}
 
-        void serialize(OStream& os) const noexcept {
+        void serialize(BOStream& os) const noexcept {
             os << Serializer<std::uint32_t>{bind.content};
         }
-        void deserialize(IStream& is) const noexcept {
+        void deserialize(BIStream& is) const noexcept {
             is >> Serializer<std::uint32_t>{bind.content};
         }
     };
@@ -201,10 +195,10 @@ export namespace pnl::ll::inline serialize::universal_binary{
         Serializer(value_type& bind) noexcept:
             bind(bind) {}
 
-        void serialize(OStream& os) const noexcept {
+        void serialize(BOStream& os) const noexcept {
             os << Serializer<RInt>{reinterpret_cast<RInt&>(bind)};
         }
-        void deserialize(IStream& is) const noexcept {
+        void deserialize(BIStream& is) const noexcept {
             is >> Serializer<RInt>{reinterpret_cast<RInt&>(bind)};
         }
     };
@@ -225,14 +219,14 @@ export namespace pnl::ll::inline serialize::universal_binary{
             bind(bind) {}
 
 
-        void serialize(OStream& os) const noexcept {
+        void serialize(BOStream& os) const noexcept {
             os << Serializer<const USize>{bind.size()};
 
             for (auto& elem: bind)
                 os << Serializer<const T>{elem};
         }
 
-        void deserialize(IStream& is) const noexcept {
+        void deserialize(BIStream& is) const noexcept {
             USize size;
             is >> Serializer<USize>{size};
             bind.resize(size);
@@ -258,14 +252,14 @@ export namespace pnl::ll::inline serialize::universal_binary{
         Serializer(value_type& bind) noexcept:
             bind(bind) {}
 
-        void serialize(OStream& os) const noexcept {
+        void serialize(BOStream& os) const noexcept {
             os << Serializer<const USize>{bind.size()};
 
             for (auto& elem: bind)
                 os << Serializer<const T>{elem};
         }
 
-        void deserialize(IStream& is) noexcept  {
+        void deserialize(BIStream& is) noexcept  {
             USize size;
 
             is >> Serializer<USize>{size};
@@ -291,14 +285,14 @@ export namespace pnl::ll::inline serialize::universal_binary{
         Serializer(value_type& bind) noexcept:
             bind(bind) {}
 
-        void serialize(OStream& os) const noexcept {
+        void serialize(BOStream& os) const noexcept {
             os << Serializer<const USize>{bind.size()};
             for (auto& elem: bind) {
                 os << Serializer<const T>{elem.first};
                 os << Serializer<const U>{elem.second};
             }
         }
-        void deserialize(IStream& is) noexcept {
+        void deserialize(BIStream& is) noexcept {
             USize size;
             is >> Serializer<USize>{size};
             for (auto& elem: bind) {
@@ -323,12 +317,12 @@ export namespace pnl::ll::inline serialize::universal_binary{
         Serializer(value_type bind) noexcept:
             bind(bind) {}
 
-        void serialize(OStream& os) const noexcept {
-            TypePack<Ts>::foreach([&]<typename T, size_t I>() {
+        void serialize(BOStream& os) const noexcept {
+            TypePack<Ts>::foreach([&]<typename T, std::size_t I>() {
                 os << Serializer<const T>{std::get<I>(bind)};
             });
         }
-        void deserialize(IStream& is) noexcept {
+        void deserialize(BIStream& is) noexcept {
             TypePack<Ts>::foreach([&]<typename T>(const USize index) {
                 is >> Serializer<T>{std::get<index>(bind)};
             });
@@ -347,11 +341,11 @@ export namespace pnl::ll::inline serialize::universal_binary{
         Serializer(value_type& bind) noexcept:
             bind(bind) {}
 
-        void serialize(OStream& os) const noexcept {
+        void serialize(BOStream& os) const noexcept {
             os << Serializer<const K>{bind.first};
             os << Serializer<const V>{bind.first};
         }
-        void deserialize(IStream& is) noexcept {
+        void deserialize(BIStream& is) noexcept {
             is >> Serializer<K>{bind.first};
             is >> Serializer<V>{bind.first};
         }
@@ -369,14 +363,14 @@ export namespace pnl::ll::inline serialize::universal_binary{
         Serializer(value_type& bind) noexcept:
             bind(bind) {}
 
-        void serialize(OStream& os) const noexcept {
+        void serialize(BOStream& os) const noexcept {
             os << Serializer<const USize>{bind.index()};
 
             std::visit([&]<typename T>(const T& v) {
                 os << Serializer<T>{v};
             }, bind);
         }
-        void deserialize(IStream& is) noexcept {
+        void deserialize(BIStream& is) noexcept {
             USize idx;
             is >> Serializer<USize>{idx};
 
@@ -396,10 +390,10 @@ export namespace pnl::ll::inline serialize::universal_binary{
         Serializer(value_type& bind) noexcept:
             bind(bind) {}
 
-        void serialize(OStream& os) const noexcept {
+        void serialize(BOStream& os) const noexcept {
             os << Serializer<Str>{bind};
         }
-        void deserialize(IStream& is) const noexcept {
+        void deserialize(BIStream& is) const noexcept {
             is >> Serializer<Str>{bind};
         }
     };

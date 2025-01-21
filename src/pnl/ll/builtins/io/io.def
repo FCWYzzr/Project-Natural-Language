@@ -1,3 +1,5 @@
-LIBRARY NL_IO
+LIBRARY nlrt_io
 EXPORTS
     write::0=?override_0_char@write@@YAXAEAUThread@runtime@ll@pnl@@@Z @1
+
+    println::0=?override_0_str_address@println@@YAXAEAUThread@runtime@ll@pnl@@@Z @2

@@ -42,7 +42,7 @@ namespace atn {
     std::string toString() const override;
 
   protected:
-    size_t hashCodeImpl() const override;
+    std::size_t hashCodeImpl() const override;
 
   private:
     /// Constructs the singleton instance of the lexer {@code popMode} command.

@@ -21,7 +21,7 @@ namespace antlr4 {
     explicit UnbufferedCharStream(std::wistream &input);
 
     void consume() override;
-    size_t LA(ssize_t i) override;
+    std::size_t LA(ssize_t i) override;
 
     /// <summary>
     /// Return a marker that we can release later.
@@ -36,14 +36,14 @@ namespace antlr4 {
     /// Decrement number of markers, resetting buffer if we hit 0. </summary>
     /// <param name="marker"> </param>
     void release(ssize_t marker) override;
-    size_t index() override;
+    std::size_t index() override;
 
     /// <summary>
     /// Seek to absolute character index, which might not be in the current
     ///  sliding window.  Move {@code p} to {@code index-bufferStartIndex}.
     /// </summary>
     void seek(size_t index) override;
-    size_t size() override;
+    std::size_t size() override;
     std::string getSourceName() const override;
     std::string getText(const misc::Interval &interval) override;
 
@@ -63,7 +63,7 @@ namespace antlr4 {
     /// The {@code LA(1)} character is {@code data[p]}. If {@code p == n}, we are
     /// out of buffered characters.
     /// </summary>
-    size_t _p;
+    std::size_t _p;
 
     /// <summary>
     /// Count up with <seealso cref="#mark mark()"/> and down with
@@ -71,16 +71,16 @@ namespace antlr4 {
     /// {@code numMarkers} reaches 0 and we reset the buffer. Copy
     /// {@code data[p]..data[n-1]} to {@code data[0]..data[(n-1)-p]}.
     /// </summary>
-    size_t _numMarkers;
+    std::size_t _numMarkers;
 
     /// This is the {@code LA(-1)} character for the current position.
-    size_t _lastChar; // UTF-32
+    std::size_t _lastChar; // UTF-32
 
     /// <summary>
     /// When {@code numMarkers > 0}, this is the {@code LA(-1)} character for the
     /// first character in <seealso cref="#data data"/>. Otherwise, this is unspecified.
     /// </summary>
-    size_t _lastCharBufferStart; // UTF-32
+    std::size_t _lastCharBufferStart; // UTF-32
 
     /// <summary>
     /// Absolute character index. It's the index of the character about to be
@@ -88,7 +88,7 @@ namespace antlr4 {
     /// entire stream, although the stream size is unknown before the end is
     /// reached.
     /// </summary>
-    size_t _currentCharIndex;
+    std::size_t _currentCharIndex;
 
     std::wistream &_input;
 
@@ -105,13 +105,13 @@ namespace antlr4 {
     /// actually added to the buffer. If the return value is less than {@code n},
     /// then EOF was reached before {@code n} characters could be added.
     /// </summary>
-    virtual size_t fill(size_t n);
+    virtual std::size_t fill(size_t n);
 
     /// Override to provide different source of characters than
     /// <seealso cref="#input input"/>.
     virtual char32_t nextChar();
     virtual void add(char32_t c);
-    size_t getBufferStartIndex() const;
+    std::size_t getBufferStartIndex() const;
   };
 
 } // namespace antlr4

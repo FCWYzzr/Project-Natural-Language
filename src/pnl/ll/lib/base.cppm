@@ -1,25 +1,37 @@
 //
 // Created by FCWY on 24-12-16.
 //
-
+module;
+#include "project-nl.h"
 export module pnl.ll.base;
-import pnl.ll.meta_prog;
-export import <string>;
-export import <type_traits>;
-export import <vector>;
-export import <memory>;
-export import <optional>;
-export import <functional>;
-export import <iostream>;
-export import <unordered_map>;
-export import <unordered_set>;
-import <span>;
-export import <cstdint>;
-export import <variant>;
-export import <queue>;
-export import <memory_resource>;
-export import <regex>;
 
+export namespace pnl::ll::inline meta_prog{
+    template<typename T, typename ...Ts>
+    struct TypePack{
+        static std::variant<T, Ts...>
+            construct(const std::size_t idx) {
+            if (idx == 0) [[unlikely]]
+                return {std::in_place_type<T>};
+            if constexpr (sizeof...(Ts) > 0)
+                return std::visit([]<typename U>(U&& v) -> std::variant<T, Ts...> {
+                    return {std::in_place_type<U>, v};
+                }, TypePack<Ts...>::construct(idx - 1));
+            else
+                std::unreachable();
+        }
+
+        template<typename Visitor, std::size_t I=0>
+        static void foreach(Visitor&& visitor) {
+            visitor.template operator()<T, I>();
+            if constexpr (sizeof...(Ts) > 0)
+                TypePack<Ts...>::template foreach<Visitor, I+1>(std::forward<Visitor>(visitor));
+        }
+
+        template<typename U>
+        constexpr static bool contains = std::same_as<T, U> ||
+            (std::same_as<Ts, U> || ...);
+    };
+}
 
 export namespace pnl::ll::inline hash{
     template<typename T>
@@ -34,7 +46,7 @@ export namespace pnl::ll::inline base {
               Unit:       bool;
         using Bool      = bool;
         using Byte      = signed char;
-        using Char      = wchar_t;
+        using Char      = char32_t;
 
         using Int       = std::int32_t;
         using Long      = std::int64_t;
@@ -46,12 +58,6 @@ export namespace pnl::ll::inline base {
         using View      = const T*;
 
 
-        consteval Char      operator""_chr      (const wchar_t c) { return c; }
-        consteval Byte      operator""_byte     (const size_t v) { return static_cast<Byte>(v); }
-        consteval Int       operator""_int      (const size_t v) { return static_cast<Int>(v); }
-        consteval Long      operator""_long     (const size_t v) { return static_cast<Long>(v); }
-        consteval Float     operator""_float    (const long double v) { return static_cast<Float>(v); }
-        consteval Double    operator""_double   (const long double v) { return static_cast<Double>(v); }
     }
 
 
@@ -61,8 +67,8 @@ export namespace pnl::ll::inline base {
     // native types
     inline namespace native {
         using UByte     = unsigned char;
-        using IStream   = std::basic_istream<UByte>;
-        using OStream   = std::basic_ostream<UByte>;
+        using BIStream   = std::basic_istream<UByte>;
+        using BOStream   = std::basic_ostream<UByte>;
 
         using USize     = std::uint64_t;
         using SSize     = std::int64_t;
@@ -82,7 +88,7 @@ export namespace pnl::ll::inline base {
         using List = std::pmr::vector<T>;
 
         using Str = std::pmr::basic_string<Char>;
-        using NStr = std::pmr::string;
+        using MBStr = std::pmr::string;
         template<typename KT, typename VT, typename Hasher = Hasher<KT>, typename KeyEq = std::equal_to<KT>>
         using Map = std::pmr::unordered_map<KT, VT, Hasher, KeyEq>;
         template<typename T>
@@ -110,7 +116,6 @@ export namespace pnl::ll::inline base {
 
         using Path = std::filesystem::path;
         using MManager = std::pmr::memory_resource;
-        using Regex = std::basic_regex<Char>;
         template<typename ...Ts>
         using Tuple = std::tuple<Ts...>;
     }
@@ -153,11 +158,24 @@ export namespace pnl::ll::inline base_traits{
 
 }
 
+export namespace pnl::ll::inline codecvt{
+    auto ntv_encoding = "UTF-8";
+    constexpr auto vm_encoding = "UTF-32LE";
+
+    PNL_LIB_PREFIX
+    Str cvt(const MBStr& in) noexcept;
+    PNL_LIB_PREFIX
+    MBStr cvt(const Str& in) noexcept;
+
+    PNL_LIB_PREFIX
+    std::size_t code_cvt(char* out, std::size_t out_size, const char* in, std::size_t in_size, const char* code_in, const char* code_out) noexcept;
+}
+
 export namespace pnl::ll::inline conditions{
     PNL_LIB_PREFIX
     void assert(bool condition, const Str& err_desc) noexcept;
     PNL_LIB_PREFIX
-    void assert(bool condition, const NStr& err_desc) noexcept;
+    void assert(bool condition, const MBStr& err_desc) noexcept;
 }
 
 export namespace pnl::ll::inline native_traits{
@@ -256,13 +274,13 @@ export namespace pnl::ll::inline hash{
 
     // make hashable container hashable (except std already given)
     template<typename C>
-    requires !std::is_default_constructible_v<std::hash<C>>
-        && ReadonlyIterable<C> && Hashable<typename C::value_type>
+    requires ((!std::is_default_constructible_v<std::hash<C>>)
+        && (ReadonlyIterable<C> && Hashable<typename C::value_type>))
     struct Hasher<C> {
-        constexpr size_t operator() (const C& lv) const noexcept {
+        constexpr std::size_t operator() (const C& lv) const noexcept {
             auto hash = std::hash<typename C::value_type>{};
 
-            size_t h = 0;
+            std::size_t h = 0;
             for (auto& v: lv) {
                 constexpr auto BASE = 13;
                 constexpr auto MASK = 0xffffff;
@@ -350,8 +368,21 @@ export namespace pnl::ll::inline vm{
         // invoke top's first override
         INVOKE_FIRST,
 
+        // end proc & clear stack
+        // note! alloced objs must destruct manually
         RETURN,
 
+        // alloc an object which die as func return
+        STACK_ALLOC,
+        STACK_NEW,
+
+        // alloc unmanaged
+        WILD_ALLOC,
+        WILD_NEW,
+        WILD_COLLECT,
+
+
+        DESTROY,
 
 
         ARG_FLAG,
@@ -365,9 +396,12 @@ export namespace pnl::ll::inline vm{
         JUMP_IF_NEGATIVE,
 
 
-        ALL(LOAD),
-        ALL(STORE),
-        REF_AT,
+        ALL(P_LOAD),
+        ALL(F_LOAD),
+        ALL(P_STORE),
+        ALL(F_STORE),
+        P_REF_AT,
+        T_REF_AT,
         ALL(FROM_REF_LOAD),
         ALL(TO_REF_STORE),
 
@@ -381,6 +415,7 @@ export namespace pnl::ll::inline vm{
         REF_METHOD,
         REF_STATIC_METHOD,
 
+        INSTATE,
     };
 
     struct alignas(std::uint32_t)

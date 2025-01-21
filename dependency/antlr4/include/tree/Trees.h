@@ -42,9 +42,9 @@ namespace tree {
      *  @since 4.5.1
      */
     static bool isAncestorOf(ParseTree *t, ParseTree *u);
-    static std::vector<ParseTree *> findAllTokenNodes(ParseTree *t, size_t ttype);
-    static std::vector<ParseTree *> findAllRuleNodes(ParseTree *t, size_t ruleIndex);
-    static std::vector<ParseTree *> findAllNodes(ParseTree *t, size_t index, bool findTokens);
+    static std::vector<ParseTree *> findAllTokenNodes(ParseTree *t, std::size_t ttype);
+    static std::vector<ParseTree *> findAllRuleNodes(ParseTree *t, std::size_t ruleIndex);
+    static std::vector<ParseTree *> findAllNodes(ParseTree *t, std::size_t index, bool findTokens);
 
     /** Get all descendents; includes t itself.
      *
@@ -61,8 +61,8 @@ namespace tree {
      *  @since 4.5.1
      */
     static ParserRuleContext* getRootOfSubtreeEnclosingRegion(ParseTree *t,
-                                                              size_t startTokenIndex, // inclusive
-                                                              size_t stopTokenIndex); // inclusive
+                                                              std::size_t startTokenIndex, // inclusive
+                                                              std::size_t stopTokenIndex); // inclusive
 
     /** Return first node satisfying the pred
      *

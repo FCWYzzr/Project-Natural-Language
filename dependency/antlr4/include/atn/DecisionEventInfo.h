@@ -31,7 +31,7 @@ namespace atn {
     /// The invoked decision number which this event is related to.
     /// </summary>
     /// <seealso cref= ATN#decisionToState </seealso>
-    const size_t decision;
+    const std::size_t decision;
 
     /// <summary>
     /// The configuration set containing additional information relevant to the
@@ -49,12 +49,12 @@ namespace atn {
     /// The token index in the input stream at which the current prediction was
     /// originally invoked.
     /// </summary>
-    const size_t startIndex;
+    const std::size_t startIndex;
 
     /// <summary>
     /// The token index in the input stream at which the current event occurred.
     /// </summary>
-    const size_t stopIndex;
+    const std::size_t stopIndex;
 
     /// <summary>
     /// {@code true} if the current event occurred during LL prediction;
@@ -62,8 +62,8 @@ namespace atn {
     /// </summary>
     const bool fullCtx;
 
-    DecisionEventInfo(size_t decision, ATNConfigSet *configs, TokenStream *input, size_t startIndex,
-                      size_t stopIndex, bool fullCtx);
+    DecisionEventInfo(size_t decision, ATNConfigSet *configs, TokenStream *input, std::size_t startIndex,
+                      std::size_t stopIndex, bool fullCtx);
   };
 
 } // namespace atn

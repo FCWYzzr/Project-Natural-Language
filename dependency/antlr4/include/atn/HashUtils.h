@@ -10,7 +10,7 @@
 namespace antlr4 {
 namespace atn {
 
-  inline bool cachedHashCodeEqual(size_t lhs, size_t rhs) {
+  inline bool cachedHashCodeEqual(size_t lhs, std::size_t rhs) {
     return lhs == rhs || lhs == 0 || rhs == 0;
   }
 

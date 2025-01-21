@@ -1,21 +1,23 @@
 project(PNL-LL-Builtins C CXX)
 
-get_property(loc GLOBAL PROPERTY loc)
 
 
 
 file(GLOB_RECURSE nl_core_src
     anonymous_core/*
 )
-add_library(NLCore SHARED
+add_library(nlrt_core SHARED
     ${nl_core_src}
     ${PNL-Lower-Level-interface}
 )
-target_link_libraries(NLCore PUBLIC
-    NL_LL
+target_include_directories(nlrt_core PUBLIC
+    ${PNL-header}
 )
-target_compile_definitions(NLCore PUBLIC
-    PNL_LIB_PREFIX=__declspec\(dllimport\)
+target_link_libraries(nlrt_core PUBLIC
+    nl-ll
+)
+target_compile_definitions(nlrt_core PUBLIC
+    "PNL_LIB_PREFIX=${IMPORT}"
 )
 
 
@@ -24,16 +26,19 @@ file(GLOB_RECURSE nl_io_src
 )
 
 
-add_library(NL_IO SHARED
+add_library(nlrt_io SHARED
     ${nl_io_src}
     ${PNL-Lower-Level-interface}
 )
-target_link_libraries(NL_IO PUBLIC
-    NL_LL
+target_include_directories(nlrt_io PUBLIC
+    ${PNL-header}
 )
-target_compile_definitions(NL_IO PUBLIC
-    PNL_LIB_PREFIX=__declspec\(dllimport\)
+target_link_libraries(nlrt_io PUBLIC
+    nl-ll
+)
+target_compile_definitions(nlrt_io PUBLIC
+    "PNL_LIB_PREFIX=${IMPORT}"
 )
 
-install(TARGETS NLCore DESTINATION "${loc}/LL/rt/")
-install(TARGETS NL_IO DESTINATION "${loc}/LL/rt/")
+install(TARGETS nlrt_core DESTINATION "${loc}/bin/rt/")
+install(TARGETS nlrt_io DESTINATION "${loc}/bin/rt/")

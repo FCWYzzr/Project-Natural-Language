@@ -1,40 +1,53 @@
-cmake_minimum_required(VERSION 3.29)
+cmake_minimum_required(VERSION 3.28)
 project(Project-Nature-Language)
 
 set(CMAKE_CXX_STANDARD 23)
-set_property(GLOBAL PROPERTY loc "${PROJECT_SOURCE_DIR}/Project-NL")
+set(loc "${PROJECT_SOURCE_DIR}/Project-NL")
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(DBG_DIR "debug")
-elseif (CMAKE_BUILD_TYPE STREQUAL "Release")
-    set(DBG_DIR "release")
+if (${CMAKE_CXX_PLATFORM_ID} STREQUAL "Windows")
+    set(lib_ext "lib")
+    set(dll_ext "dll")
+    set(linker_ext "lib")
+elseif (${CMAKE_CXX_PLATFORM_ID} STREQUAL "Linux")
+    set(lib_ext "a")
+    set(dll_ext "so")
+    set(linker_ext "so")
+# elseif(${CMAKE_CXX_PLATFORM_ID} STREQUAL "Apple")
+else ()
+    message(FATAL_ERROR "please configure your platform properties manually: ${CMAKE_CXX_PLATFORM_ID}")
 endif ()
 
 
+if (${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
+    set(EXPORT "__declspec(dllexport)")
+    set(IMPORT "__declspec(dllimport)")
+else()
+    message(WARNING "until 2025-1-21, compilers other than MSVC DO NOT fully support module features. You may use clang++/MSVC instead.")
+    message(WARNING ">>>>>> YOU HAVE BEEN WARNED <<<<<<")
 
-foreach (dep "antlr4")
-    file(GLOB dep-lib
-        "${PROJECT_SOURCE_DIR}/dependency/${dep}/${DBG_DIR}/bin/*.lib"
-    )
-    file(GLOB dep-dlls
-        "${PROJECT_SOURCE_DIR}/dependency/${dep}/${DBG_DIR}/*.dll"
-    )
-    file(GLOB_RECURSE dep-hs
-        "${PROJECT_SOURCE_DIR}/dependency/${dep}/include/*"
-    )
-    set_property(GLOBAL PROPERTY "${dep}-lib" ${dep-lib})
-    set_property(GLOBAL PROPERTY "${dep}-header" "${PROJECT_SOURCE_DIR}/dependency/${dep}/include")
-    include_directories("${PROJECT_SOURCE_DIR}/dependency/${dep}/include")
-    install(FILES ${dep-hs} DESTINATION "${loc}/include")
-    install(FILES ${dep-dlls} DESTINATION "${loc}/LL")
-endforeach ()
+    if (${CMAKE_CXX_COMPILER_ID} STREQUAL GNU)
+        set(EXPORT "__attribute__((visibility(\"default\")))")
+        set(IMPORT "")
+        set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fmodule-ts -fvisibility=hidden")
+    elseif(${CMAKE_CXX_COMPILER_ID} STREQUAL Clang)
+        if (${CMAKE_CXX_PLATFORM_ID} STREQUAL "Windows")
+            set(EXPORT "__declspec(dllexport)")
+            set(IMPORT "__declspec(dllimport)")
+        elseif (${CMAKE_CXX_PLATFORM_ID} STREQUAL "Linux")
+            set(EXPORT "__attribute((visibility(\"default\")))")
+            set(IMPORT "")
+        # elseif(${CMAKE_CXX_PLATFORM_ID} STREQUAL "Apple")
+        else ()
+            message(FATAL_ERROR "please configure your platform properties manually: ${CMAKE_CXX_PLATFORM_ID}")
+        endif ()
+    else()
+        message(FATAL_ERROR "please configure your compiler properties manually: ${CMAKE_CXX_COMPILER_ID}")
+    endif ()
+endif ()
 
-include_directories(dependency/dlfcn/include)
+set(PNL-header "${PROJECT_SOURCE_DIR}/include")
 
-set_property(GLOBAL PROPERTY dep-includes ${includes})
-set_property(GLOBAL PROPERTY dep-libs ${libs})
-
-
+add_subdirectory(dependency)
 add_subdirectory(src/pnl/ll)
 
 

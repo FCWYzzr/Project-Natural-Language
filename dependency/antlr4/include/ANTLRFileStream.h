@@ -16,7 +16,7 @@ namespace antlr4 {
   public:
     ANTLRFileStream() = default;
     ANTLRFileStream(const std::string &) = delete;
-    ANTLRFileStream(const char *data, size_t length) = delete;
+    ANTLRFileStream(const char *data, std::size_t length) = delete;
     ANTLRFileStream(std::istream &stream) = delete;
 
     // Assumes a file name encoded in UTF-8 and file content in the same encoding (with or w/o BOM).

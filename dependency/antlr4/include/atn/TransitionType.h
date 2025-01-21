@@ -14,7 +14,7 @@ namespace antlr4 {
 namespace atn {
 
   // Constants for transition serialization.
-  enum class TransitionType : size_t {
+  enum class TransitionType : std::size_t {
     EPSILON = 1,
     RANGE = 2,
     RULE = 3,

@@ -53,7 +53,7 @@ namespace antlr4 {
      * @param tokenSource The token source.
      * @param channel The channel to use for filtering tokens.
      */
-    CommonTokenStream(TokenSource *tokenSource, size_t channel);
+    CommonTokenStream(TokenSource *tokenSource, std::size_t channel);
 
     virtual Token* LT(ssize_t k) override;
 
@@ -68,7 +68,7 @@ namespace antlr4 {
      * The default value is {@link Token#DEFAULT_CHANNEL}, which matches the
      * default channel assigned to tokens created by the lexer.</p>
      */
-    size_t channel;
+    std::size_t channel;
 
     virtual ssize_t adjustSeekIndex(size_t i) override;
 

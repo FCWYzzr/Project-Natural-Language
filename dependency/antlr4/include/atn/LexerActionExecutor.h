@@ -94,9 +94,9 @@ namespace atn {
     /// <param name="startIndex"> The token start index. This value may be passed to
     /// <seealso cref="IntStream#seek"/> to set the {@code input} position to the beginning
     /// of the token. </param>
-    void execute(Lexer *lexer, CharStream *input, size_t startIndex) const;
+    void execute(Lexer *lexer, CharStream *input, std::size_t startIndex) const;
 
-    size_t hashCode() const;
+    std::size_t hashCode() const;
 
     bool equals(const LexerActionExecutor &other) const;
 
@@ -120,7 +120,7 @@ namespace std {
 
   template <>
   struct hash<::antlr4::atn::LexerActionExecutor> {
-    size_t operator()(const ::antlr4::atn::LexerActionExecutor &lexerActionExecutor) const {
+    std::size_t operator()(const ::antlr4::atn::LexerActionExecutor &lexerActionExecutor) const {
       return lexerActionExecutor.hashCode();
     }
   };

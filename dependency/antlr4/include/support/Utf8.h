@@ -21,7 +21,7 @@ namespace antlrcpp {
     // sequence is returned the replacement character, U+FFFD, is returned with a
     // code unit count of 1. As U+FFFD requires 3 code units when encoded, this can
     // be used to differentiate valid input from malformed input.
-    static std::pair<char32_t, size_t> decode(std::string_view input);
+    static std::pair<char32_t, std::size_t> decode(std::string_view input);
 
     // Decodes the given UTF-8 encoded input into a string of code points.
     static std::optional<std::u32string> strictDecode(std::string_view input);

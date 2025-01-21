@@ -1,7 +1,11 @@
 //
 // Created by FCWY on 25-1-8.
 //
+module;
+#include "project-nl.h"
+
 module pnl.ll.collections;
+
 
 namespace pnl::ll::collections::pmr{
 
@@ -23,20 +27,24 @@ void Stack::placeholder_push(const USize size) noexcept {
 }
 
 void Stack::waste_top() noexcept {
-    assert(!obj_offset.empty(), L"stack underflow");
+    assert(!obj_offset.empty(), VM_TEXT("stack underflow"));
     dense_pool.resize(obj_offset.back());
     obj_offset.pop_back();
 }
 
-void Stack::waste_since(const USize milestone) noexcept {
+void Stack::waste_since(const std::uint32_t milestone) noexcept {
     if (milestone == obj_offset.size())
         return;
-    assert(milestone > obj_offset.size(), L"stack underflow");
+    assert(milestone > obj_offset.size(), VM_TEXT("stack underflow"));
     while(obj_offset.size() > milestone) {
         obj_offset.pop_back();
     }
 
     waste_top();
+}
+
+std::uint32_t Stack::milestone() const noexcept {
+    return obj_offset.size();
 }
 
 UByte* Stack::operator[](const USize id) noexcept {

@@ -38,19 +38,19 @@ namespace atn {
     /// <seealso cref="Recognizer#action"/>. </param>
     /// <param name="actionIndex"> The action index to use for calls to
     /// <seealso cref="Recognizer#action"/>. </param>
-    LexerCustomAction(size_t ruleIndex, size_t actionIndex);
+    LexerCustomAction(size_t ruleIndex, std::size_t actionIndex);
 
     /// <summary>
     /// Gets the rule index to use for calls to <seealso cref="Recognizer#action"/>.
     /// </summary>
     /// <returns> The rule index for the custom action. </returns>
-    size_t getRuleIndex() const { return _ruleIndex; }
+    std::size_t getRuleIndex() const { return _ruleIndex; }
 
     /// <summary>
     /// Gets the action index to use for calls to <seealso cref="Recognizer#action"/>.
     /// </summary>
     /// <returns> The action index for the custom action. </returns>
-    size_t getActionIndex() const { return _actionIndex; }
+    std::size_t getActionIndex() const { return _actionIndex; }
 
     /// <summary>
     /// {@inheritDoc}
@@ -64,11 +64,11 @@ namespace atn {
     std::string toString() const override;
 
   protected:
-    size_t hashCodeImpl() const override;
+    std::size_t hashCodeImpl() const override;
 
   private:
-    const size_t _ruleIndex;
-    const size_t _actionIndex;
+    const std::size_t _ruleIndex;
+    const std::size_t _actionIndex;
   };
 
 } // namespace atn

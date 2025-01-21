@@ -22,7 +22,7 @@ namespace atn {
     int getPrecedence() const { return _predicate->precedence; }
 
     bool isEpsilon() const override;
-    bool matches(size_t symbol, size_t minVocabSymbol, size_t maxVocabSymbol) const override;
+    bool matches(size_t symbol, std::size_t minVocabSymbol, std::size_t maxVocabSymbol) const override;
     std::string toString() const override;
 
     const Ref<const SemanticContext::PrecedencePredicate>& getPredicate() const { return _predicate; }

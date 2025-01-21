@@ -10,7 +10,7 @@
 namespace antlrcpp {
 
   ANTLR4CPP_PUBLIC std::string join(const std::vector<std::string> &strings, const std::string &separator);
-  ANTLR4CPP_PUBLIC std::map<std::string, size_t> toMap(const std::vector<std::string> &keys);
+  ANTLR4CPP_PUBLIC std::map<std::string, std::size_t> toMap(const std::vector<std::string> &keys);
   ANTLR4CPP_PUBLIC std::string escapeWhitespace(std::string str, bool escapeSpaces);
   ANTLR4CPP_PUBLIC std::string toHexString(const int t);
   ANTLR4CPP_PUBLIC std::string arrayToString(const std::vector<std::string> &data);

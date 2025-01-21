@@ -16,7 +16,7 @@ namespace atn {
     OrderedATNConfigSet() = default;
 
   private:
-    size_t hashCode(const ATNConfig &atnConfig) const override;
+    std::size_t hashCode(const ATNConfig &atnConfig) const override;
 
     bool equals(const ATNConfig &lhs, const ATNConfig &rhs) const override;
   };

@@ -2,23 +2,105 @@
 // Created by FCWY on 25-1-8.
 //
 // ReSharper disable CppDFANullDereference
-
+// ReSharper disable CppDFAUnreadVariable
+// ReSharper disable CppDFAUnusedValue
+module;
+#include "project-nl.h"
 module pnl.ll.runtime;
-
-#ifdef WIN32
-#define DLL_EXT ".dll"
-#else
-#define DLL_EXT ".so"
-#endif
-
-import <optional>;
-import <memory>;
-import <stdexcept>;
-
-
 using namespace pnl::ll::runtime;
 using namespace pnl::ll::runtime::load;
 using namespace pnl::ll::runtime::execute;
+
+
+
+std::uint8_t VirtualAddress::page() const noexcept {
+    return (content  >> 48) % 0xf;
+}
+
+std::uint32_t VirtualAddress::id() const noexcept {
+    return (content >> 16) & 0xffffffff;
+}
+
+std::uint16_t VirtualAddress::offset() const noexcept {
+    return content & 0xffff;
+}
+
+VirtualAddress VirtualAddress::id_shift(const std::uint32_t shift) const noexcept {
+    return {page(), id() + shift, offset()};
+}
+
+VirtualAddress VirtualAddress::offset_shift(const std::uint16_t shift) const noexcept {
+    return {page(), id(), static_cast<std::uint16_t>(offset() + shift)};
+}
+
+bool VirtualAddress::is_native() const noexcept {
+    return page() == native_page_id;
+}
+
+bool VirtualAddress::is_reserved() const noexcept {
+    return page() == invalid_page_id;
+}
+
+bool VirtualAddress::is_process() const noexcept {
+    return page() == process_page_id;
+}
+
+std::strong_ordering VirtualAddress::operator<=>(const VirtualAddress other) const noexcept {
+    return content <=> other.content;
+}
+
+[[nodiscard]]
+static Class& vm__top_obj_type(Thread&) noexcept;
+static std::variant<FuncContext, NtvFunc>&
+cur_func(Thread& thr) noexcept {
+    if (thr.init_queue.empty())
+        return thr.call_stack.top();
+    return thr.init_queue.front();
+}
+static void
+pop_func(Thread& thr) noexcept {
+    if (thr.init_queue.empty())
+        return thr.call_stack.pop();
+    return thr.init_queue.pop();
+}
+static void cast(Thread&, Instruction) noexcept;
+static void cmp(Thread&) noexcept;
+static void invoke_top(Thread&) noexcept;
+static void jump(Thread&, Instruction) noexcept;
+static void add(Thread&) noexcept;
+static void sub(Thread&) noexcept;
+static void mul(Thread&) noexcept;
+static void div(Thread&) noexcept;
+static void rem(Thread&) noexcept;
+static void neg(Thread&) noexcept;
+static void shl(Thread&) noexcept;
+static void shr(Thread&) noexcept;
+static void ushr(Thread&) noexcept;
+static void bit_and(Thread&) noexcept;
+static void bit_or(Thread&) noexcept;
+static void bit_xor(Thread&) noexcept;
+static void bit_inv(Thread&) noexcept;
+static void p_load(Thread&, Instruction) noexcept;
+static void p_store(Thread&, Instruction) noexcept;
+static void f_load(Thread&, Instruction) noexcept;
+static void f_store(Thread&, Instruction) noexcept;
+static void stack_alloc(Thread&) noexcept;
+static void stack_new(Thread&) noexcept;
+static void end_proc(Thread&) noexcept;
+static void wild_alloc(Thread&) noexcept;
+static void wild_new(Thread&) noexcept;
+static void wild_collect(Thread&) noexcept;
+static void p_ref_at(Thread&, Instruction) noexcept;
+static void f_ref_at(Thread&, Instruction) noexcept;
+static void load_by_ref(Thread&, Instruction) noexcept;
+static void store_by_ref(Thread&, Instruction) noexcept;
+static void ref_member(Thread&, Instruction) noexcept;
+static void ref_static_member(Thread&, Instruction) noexcept;
+static void ref_method(Thread&, Instruction) noexcept;
+static void ref_static_method(Thread&, Instruction) noexcept;
+static void invoke_override(Thread&, Instruction) noexcept;
+static void instate(Thread&, Instruction) noexcept;
+static void destroy(Thread&) noexcept;
 
 Process::Process(MManager* const upstream, Datapack target, const Path& runtime_path):
     process_memory{
@@ -30,9 +112,9 @@ Process::Process(MManager* const upstream, Datapack target, const Path& runtime_
     auto mem = &process_memory;
     // load core
     auto lib_map = Map<Path, VMLib>{mem};
-    lib_map.emplace(runtime_path / "NLCore", VMLib(runtime_path / "NLCore"));
+    lib_map.emplace(runtime_path / "nlrt_core", VMLib(runtime_path / "nlrt_core"));
     auto pkg_map = Dict<Package>{mem};
-    pkg_map.emplace(L"", Package::anonymous_builtin(mem));
+    pkg_map.emplace(VM_TEXT(""), Package::anonymous_builtin(mem));
 
     auto datapack = Datapack::from_lib(std::move(lib_map));
     datapack += Datapack::from_pkg(std::move(pkg_map));
@@ -44,8 +126,8 @@ Process::Process(MManager* const upstream, Datapack target, const Path& runtime_
 
     lib_map.clear();
     pkg_map.clear();
-    lib_map.emplace(runtime_path / "NL_IO", VMLib(runtime_path / "NL_IO"));
-    pkg_map.emplace(L"io", Package::io(mem));
+    lib_map.emplace(runtime_path / "nlrt_io", VMLib(runtime_path / "nlrt_io"));
+    pkg_map.emplace(VM_TEXT("io"), Package::io(mem));
     datapack = Datapack::from_lib(std::move(lib_map));
     datapack += Datapack::from_pkg(std::move(pkg_map));
     patch = compile_datapack(std::move(datapack));
@@ -61,9 +143,9 @@ Process::Process(MManager* const upstream, Datapack target, const Path& runtime_
     load_patch(std::move(patch.value()));
 
 
-    assert(named_exports.contains(L"main"), "module not executable(main not found )");
+    assert(named_exports.contains(VM_TEXT("main")), "module not executable(main not found )");
 
-    auto& main = deref<FFamily>(named_exports.at(L"main"));
+    auto& main = deref<FFamily>(named_exports.at(VM_TEXT("main")));
     threads[0].call_function(main, 0);
 
     threads[0].resume();
@@ -87,7 +169,7 @@ Thread & Process::get_available_thread() noexcept {
     for (auto& thr: threads)
         if (thr.call_stack.empty())
             return thr;
-    threads.emplace_back(this, static_cast<std::uint16_t>(threads.size()));
+    threads.emplace_back(this, static_cast<std::uint8_t>(threads.size()));
     return threads.back();
 }
 
@@ -95,15 +177,41 @@ Thread & Process::main_thread() noexcept {
     return threads.at(0);
 }
 
-Class& Thread::vm__top_obj_type() noexcept {
-    const auto& obj = deref<RTTObject>(std::get<VirtualAddress>(eval_stack.top()));
-    return deref<Class>(obj.type);
+VirtualAddress Process::wild_alloc(const Int size) noexcept {
+    for (auto [idx, elem]: native_page | std::views::enumerate)
+        if (elem.first == nullptr) {
+            elem.first = static_cast<UByte*>(process_memory.allocate(size));
+            elem.second = size;
+            return {VirtualAddress::native_page_id, static_cast<std::uint32_t>(idx)};
+        }
+
+    native_page.emplace_back(
+        static_cast<UByte*>(process_memory.allocate(size)),
+        static_cast<std::uint32_t>(size)
+    );
+    return {VirtualAddress::native_page_id, static_cast<std::uint32_t>(native_page.size() - 1)};
 }
 
+void Process::wild_collect(const VirtualAddress va) noexcept {
+    if (va.is_reserved())
+        return;
+    assert(va.is_native(), "trying to collect a non-wild-alloced address");
+    assert(va.id() < native_page.size(), "address invalid");
+    auto& [ptr, size] = native_page[va.id()];
+    process_memory.deallocate(ptr, size);
+    ptr = nullptr;
+
+    shrink_if_necessary(native_page);
+}
+
+Class& vm__top_obj_type(Thread& thr) noexcept {
+    const auto& [type] = thr.deref<RTTObject>(std::get<VirtualAddress>(thr.eval_stack.top()));
+    return thr.deref<Class>(type);
+}
 
 Thread::Thread(
     Process *process,
-    const std::uint16_t thread_id) noexcept:
+    const std::uint8_t thread_id) noexcept:
     step_token{0},
     process{process},
     thread_id{thread_id},
@@ -122,6 +230,10 @@ Thread::Thread(Thread &&other) noexcept:
     thread_page(std::move(other.thread_page)),
     eval_stack(std::move(other.eval_stack)),
     native_handler(std::move(other.native_handler)) {
+}
+
+FuncContext& Thread::current_proc() noexcept {
+    return std::get<FuncContext>(cur_func(*this));
 }
 
 void Thread::pause() const noexcept {
@@ -154,20 +266,13 @@ void Thread::clear() noexcept {
     thread_page.waste_since(0);
 }
 
-static std::variant<FuncContext, NtvFunc>&
-cur_func(Thread& thr) noexcept {
-    if (thr.init_queue.empty())
-        return thr.call_stack.top();
-    return thr.init_queue.front();
+VirtualAddress Thread::process_memory_base() noexcept {
+    return current_proc().base_addr;
 }
 
-static void
-pop_func(Thread& thr) noexcept {
-    if (thr.init_queue.empty())
-        return thr.call_stack.pop();
-    return thr.init_queue.pop();
+VirtualAddress Thread::function_memory_base() noexcept {
+    return {thread_id, current_proc().milestone};
 }
-
 
 void Thread::run(const std::stop_token &token) noexcept {
     step_token.acquire();
@@ -190,16 +295,31 @@ void Thread::run(const std::stop_token &token) noexcept {
     };
 }
 
+#define INTEGRAL(prefix) \
+prefix##_INT:        \
+case prefix##_LONG
+
+#define COMPUTABLE(prefix)  \
+INTEGRAL(prefix):       \
+case prefix##_FLOAT:         \
+case prefix##_DOUBLE
+
+#define ALL(prefix)  \
+prefix##_BOOL:       \
+case prefix##_CHAR:       \
+case prefix##_BYTE:       \
+case COMPUTABLE(prefix):  \
+case prefix##_REF
+
 using enum OPCode;
 void Thread::step() noexcept {
     const auto inst = *current_proc();
     ++ current_proc();
     switch (inst.opcode()) {
         case NOP:
-            nop();
             break;
         case WASTE:
-            waste();
+            eval_stack.pop();
             break;
         case CAST_C2I:
         case CAST_B2I:
@@ -217,134 +337,160 @@ void Thread::step() noexcept {
         case CAST_D2I:
         case CAST_D2L:
         case CAST_D2F:
-            cast(inst);
+            cast(*this, inst);
             break;
         case CMP:
-            cmp();
+            cmp(*this);
             break;
         case ADD:
-            add();
+            add(*this);
             break;
         case SUB:
-            sub();
+            sub(*this);
             break;
         case MUL:
-            mul();
+            mul(*this);
             break;
         case DIV:
-            div();
+            div(*this);
             break;
         case REM:
-            rem();
+            rem(*this);
             break;
         case NEG:
-            neg();
+            neg(*this);
             break;
         case SHL:
-            shl();
+            shl(*this);
             break;
         case SHR:
-            shr();
+            shr(*this);
             break;
         case USHR:
-            ushr();
+            ushr(*this);
             break;
         case BIT_AND:
-            bit_and();
+            bit_and(*this);
             break;
         case BIT_OR:
-            bit_or();
+            bit_or(*this);
             break;
         case BIT_XOR:
-            bit_xor();
+            bit_xor(*this);
             break;
         case BIT_INV:
-            bit_inv();
+            bit_inv(*this);
             break;
         case INVOKE_FIRST:
-            invoke_top();
+            invoke_top(*this);
             break;
         case RETURN:
-            end_proc();
+            end_proc(*this);
+            break;
+        case STACK_ALLOC:
+            stack_alloc(*this);
+            break;
+        case STACK_NEW:
+            stack_new(*this);
+            break;
+        case WILD_ALLOC:
+            wild_alloc(*this);
+            break;
+        case WILD_NEW:
+            wild_new(*this);
+            break;
+        case WILD_COLLECT:
+            wild_collect(*this);
+            break;
+        case DESTROY:
+            destroy(*this);
             break;
         case ARG_FLAG:
             std::unreachable();
-            // break;
         case JUMP:
         case JUMP_IF_ZERO:
         case JUMP_IF_NOT_ZERO:
         case JUMP_IF_POSITIVE:
         case JUMP_IF_NEGATIVE:
-            jump(inst);
+            jump(*this, inst);
             break;
-        case LOAD_BOOL:
-        case LOAD_CHAR:
-        case LOAD_BYTE:
-        case LOAD_INT:
-        case LOAD_LONG:
-        case LOAD_FLOAT:
-        case LOAD_DOUBLE:
-        case LOAD_REF:
-            load(inst);
+        case ALL(P_LOAD):
+            p_load(*this, inst);
             break;
-        case REF_AT:
-            ref_at(inst);
+        case ALL(F_LOAD):
+            f_load(*this, inst);
             break;
-        case STORE_BOOL:
-        case STORE_CHAR:
-        case STORE_BYTE:
-        case STORE_INT:
-        case STORE_LONG:
-        case STORE_FLOAT:
-        case STORE_DOUBLE:
-        case STORE_REF:
-            store(inst);
+        case P_REF_AT:
+            p_ref_at(*this, inst);
             break;
-        case FROM_REF_LOAD_BOOL:
-        case FROM_REF_LOAD_CHAR:
-        case FROM_REF_LOAD_BYTE:
-        case FROM_REF_LOAD_INT:
-        case FROM_REF_LOAD_LONG:
-        case FROM_REF_LOAD_FLOAT:
-        case FROM_REF_LOAD_DOUBLE:
-        case FROM_REF_LOAD_REF:
-            load_by_ref(inst);
+        case T_REF_AT:
+            f_ref_at(*this, inst);
             break;
-        case TO_REF_STORE_BOOL:
-        case TO_REF_STORE_CHAR:
-        case TO_REF_STORE_BYTE:
-        case TO_REF_STORE_INT:
-        case TO_REF_STORE_LONG:
-        case TO_REF_STORE_FLOAT:
-        case TO_REF_STORE_DOUBLE:
-        case TO_REF_STORE_REF:
-            store_by_ref(inst);
+        case ALL(P_STORE):
+            p_store(*this, inst);
+            break;
+        case ALL(F_STORE):
+            f_store(*this, inst);
+            break;
+        case ALL(FROM_REF_LOAD):
+            load_by_ref(*this, inst);
+            break;
+        case ALL(TO_REF_STORE):
+            store_by_ref(*this, inst);
             break;
         case REF_MEMBER:
-            ref_member(inst);
+            ref_member(*this, inst);
             break;
         case REF_STATIC_MEMBER:
-            ref_static_member(inst);
+            ref_static_member(*this, inst);
             break;
         case INVOKE_OVERRIDE:
-            invoke_override(inst);
+            invoke_override(*this, inst);
             break;
         case REF_METHOD:
-            ref_method(inst);
+            ref_method(*this, inst);
             break;
         case REF_STATIC_METHOD:
-            ref_static_method(inst);
+            ref_static_method(*this, inst);
+            break;
+        case INSTATE:
+            instate(*this, inst);
             break;
     }
 }
 
-void Thread::waste() noexcept {
-    eval_stack.pop();
+
+
+Instruction FuncContext::operator * () const noexcept {
+    return process.deref<Array<Instruction>>(instructions)[program_counter];
 }
 
-void Thread::cast(const Instruction inst) noexcept {
-    Value v = eval_stack.top();
-    eval_stack.pop();
+FuncContext & FuncContext::operator ++ () noexcept {
+    ++ program_counter;
+    return *this;
+}
+
+void stack_alloc(Thread& thr) noexcept {
+    auto base = VirtualAddress{
+        thr.thread_id,
+        thr.thread_page.milestone()
+    };
+    thr.thread_page.placeholder_push(std::get<Int>(thr.take()));
+    thr.eval_stack.emplace(TFlag<VirtualAddress>, base);
+}
+void stack_new(Thread& thr) noexcept {
+    auto base = VirtualAddress{
+        thr.thread_id,
+        thr.thread_page.milestone()
+    };
+    thr.thread_page.placeholder_push(std::get<Int>(thr.take()));
+    thr.eval_stack.emplace(TFlag<VirtualAddress>, base);
+}
+
+
+
+void cast(Thread& thr, const Instruction inst) noexcept {
+    Value v = thr.take();
     // ReSharper disable CppDFAUnusedValue
     switch (inst.opcode()) {
         case CAST_B2I:
@@ -414,17 +560,14 @@ void Thread::cast(const Instruction inst) noexcept {
             std::unreachable();
     }
     // ReSharper restore CppDFAUnusedValue
-    eval_stack.push(v);
+    thr.eval_stack.push(v);
 }
 
-void Thread::cmp() noexcept {
-    auto top1 = eval_stack.top();
-    eval_stack.pop();
-    auto top2 = eval_stack.top();
-    eval_stack.pop();
+void cmp(Thread& thr) noexcept {
+    const auto top1 = thr.take();
 
     // ReSharper disable once CppDFAUnusedValue
-    const auto ret = std::visit([&top2]<typename T>(const T v1) {
+    const auto ret = std::visit([top2=thr.take()]<typename T>(const T v1) {
         return std::visit([&v1]<typename U>(const U v2) -> std::partial_ordering {
             if constexpr (TypePack<Int, Long, Float, Double>::contains<T>
                     && std::same_as<T, U>)
@@ -435,97 +578,93 @@ void Thread::cmp() noexcept {
     }, top1);
 
     if (ret < 0)
-        eval_stack.emplace(TFlag<Int>, -1);
+        thr.eval_stack.emplace(TFlag<Int>, -1);
     else if (ret > 0)
-        eval_stack.emplace(TFlag<Int>, 1);
+        thr.eval_stack.emplace(TFlag<Int>, 1);
     else
-        eval_stack.emplace(TFlag<Int>, 0);
+        thr.eval_stack.emplace(TFlag<Int>, 0);
 }
 
-void Thread::invoke_top() noexcept {
-    const auto top = eval_stack.top();
-    eval_stack.pop();
-    auto& ref = deref<FFamily>(std::get<VirtualAddress>(top));
-    call_function(ref, 0);
+void invoke_top(Thread& thr) noexcept {
+    const auto& ref = thr.deref<FFamily>(std::get<VirtualAddress>(thr.take()));
+    thr.call_function(ref, 0);
 }
 
-void Thread::end_proc() noexcept {
+void end_proc(Thread& thr) noexcept {
     // pop proc
     // ReSharper disable once CppDFAUnusedValue
-    const auto last_milestone = current_proc()
+    const auto last_milestone = thr.current_proc()
             .milestone;
-    pop_func(*this);
+    pop_func(thr);
 
     // waste data
-    thread_page.waste_since(last_milestone);
+    thr.thread_page.waste_since(last_milestone);
 }
 
-void Thread::jump(const Instruction inst) noexcept {
+void wild_alloc(Thread& thr) noexcept {
+    thr.eval_stack.emplace(TFlag<VirtualAddress>,
+        thr.process->wild_alloc(
+            std::get<Int>(thr.take())
+        )
+    );
+}
+
+void wild_new(Thread& thr) noexcept {
+    const auto& tp = thr.deref<Class>(std::get<VirtualAddress>(thr.take()));
+    // ReSharper disable once CppDFAUnreadVariable
+    // ReSharper disable once CppDFAUnusedValue
+    const auto o_id = std::get<Int>(thr.take());
+
+    thr.eval_stack.emplace(TFlag<VirtualAddress>, thr.process->wild_alloc(tp.instance_size));
+    thr.call_function(thr.deref<FFamily>(tp.maker), o_id);
+}
+
+void wild_collect(Thread& thr) noexcept {
+    thr.process -> wild_collect(std::get<VirtualAddress>(thr.take()));
+}
+
+void jump(Thread& thr, const Instruction inst) noexcept {
     Value top;
     switch (inst.opcode()) {
         case JUMP:[[unlikely]]
-                    current_proc()
+                    thr.current_proc()
                     .program_counter = inst.arg();
             break;
         case JUMP_IF_ZERO:
-            top = eval_stack.top();
-            eval_stack.pop();
+            top = thr.take();
             if (std::get<int>(top) == 0)
-                current_proc()
+                thr.current_proc()
                         .program_counter = inst.arg();
             break;
         case JUMP_IF_NOT_ZERO:
-            top = eval_stack.top();
-            eval_stack.pop();
+            top = thr.take();
             if (std::get<int>(top) != 0)
-                current_proc()
+                thr.current_proc()
                         .program_counter = inst.arg();
             break;
         case JUMP_IF_POSITIVE:
-            top = eval_stack.top();
-            eval_stack.pop();
+            top = thr.take();
             if (std::get<int>(top) > 0)
-                current_proc()
+                thr.current_proc()
                         .program_counter = inst.arg();
             break;
         case JUMP_IF_NEGATIVE:
-            top = eval_stack.top();
-            eval_stack.pop();
+            top = thr.take();
             if (std::get<int>(top) < 0)
-                current_proc()
+                thr.current_proc()
                         .program_counter = inst.arg();
             break;
         default:[[unlikely]]
-                    std::unreachable();
+            std::unreachable();
     }
-}
-
-FuncContext& Thread::current_proc() noexcept {
-    return std::get<FuncContext>(cur_func(*this));
-}
-
-VirtualAddress Thread::mem_spec_base() noexcept {
-    return current_proc().base_addr;
-}
-
-
-Instruction FuncContext::operator * () const noexcept {
-    return process.deref<Array<Instruction>>(instructions)[program_counter];
-}
-
-FuncContext & FuncContext::operator ++ () noexcept {
-    ++ program_counter;
-    return *this;
 }
 
 
 
 #define BI_VAR_METHOD(NAME, ...)\
-void Thread::NAME() noexcept {\
-    auto top1 = eval_stack.top();\
-    eval_stack.pop();\
-    auto top2 = eval_stack.top();\
-    eval_stack.pop();\
+void NAME(Thread& thr) noexcept {\
+    auto top1 = thr.take();\
+    auto top2 = thr.take();\
     auto ret = std::visit([&top2](const auto v1) {\
         return std::visit([v1](const auto v2) -> Value{\
             if constexpr (!TypePack<__VA_ARGS__>::template contains<decltype(v1)>) [[unlikely]] {\
@@ -536,12 +675,11 @@ void Thread::NAME() noexcept {\
                 return Value{TFlag<decltype(OP(v1, v2))>, OP(v1, v2)};\
         }, top2);\
     }, top1);\
-    eval_stack.push(ret);\
+    thr.eval_stack.emplace(ret);\
 }
 #define UNI_VAR_METHOD(NAME, ...)\
-void Thread::NAME() noexcept {\
-    auto top = eval_stack.top();\
-    eval_stack.pop();\
+void NAME(Thread& thr) noexcept {\
+    auto top = thr.take();\
     auto ret = std::visit([](const auto v) {\
         if constexpr (!TypePack<__VA_ARGS__>::template contains<decltype(v)>) [[unlikely]] {\
             std::unreachable();\
@@ -550,11 +688,11 @@ void Thread::NAME() noexcept {\
         else\
             return Value{TFlag<decltype(OP(v))>, OP(v)};\
     }, top);\
-    eval_stack.push(ret);\
+    thr.eval_stack.emplace(ret);\
 }
 
 #define UNI_ALL_METHOD(PREFIX, NAME)\
-    void Thread::NAME(Instruction inst) noexcept{\
+    void NAME(Thread& thr, Instruction inst) noexcept{\
             G_OP;\
             switch (inst.opcode()) {\
                 case PREFIX##_BOOL:OP(Bool);break;\
@@ -612,92 +750,100 @@ UNI_VAR_METHOD(bit_inv, Int, Long)
 
 #define G_OP
 #define OP(TYPE) {\
-            auto& top = deref<TYPE>(mem_spec_base().id_shift(inst.arg()));\
-            eval_stack.emplace(TFlag<TYPE>, top);\
+            auto& top = thr.deref<TYPE>(thr.process_memory_base().id_shift(inst.arg()));\
+            thr.eval_stack.emplace(TFlag<TYPE>, top);\
         }
-UNI_ALL_METHOD(LOAD, load)
+UNI_ALL_METHOD(P_LOAD, p_load)
 #undef OP
-
-
 #define OP(TYPE) {\
-            auto v = std::get<TYPE>(eval_stack.top());\
-            eval_stack.pop();\
-            deref<TYPE>(mem_spec_base().id_shift(inst.arg())) = v;\
+            auto v = std::get<TYPE>(thr.take());\
+            thr.deref<TYPE>(thr.process_memory_base().id_shift(inst.arg())) = v;\
         }
-UNI_ALL_METHOD(STORE, store)
-
-void Thread::ref_at(const Instruction inst) noexcept {
-    eval_stack.emplace(TFlag<VirtualAddress>, mem_spec_base().id_shift(inst.arg()));
-}
+UNI_ALL_METHOD(P_STORE, p_store)
+#undef OP
+#define OP(TYPE) {\
+            auto& top = thr.deref<TYPE>(thr.function_memory_base().id_shift(inst.arg()));\
+            thr.eval_stack.emplace(TFlag<TYPE>, top);\
+        }
+UNI_ALL_METHOD(F_LOAD, f_load)
+#undef OP
+#define OP(TYPE) {\
+            auto v = std::get<TYPE>(thr.take());\
+            thr.deref<TYPE>(thr.function_memory_base().id_shift(inst.arg())) = v;\
+        }
+UNI_ALL_METHOD(F_STORE, f_store)
 #undef OP
 #undef G_OP
 
-#define G_OP auto target = std::get<VirtualAddress>(eval_stack.top());\
-    eval_stack.pop()
-#define OP(TYPE) {\
-            eval_stack.emplace(TFlag<TYPE>, deref<TYPE>(target));\
-        }
+
+void p_ref_at(Thread& thr, const Instruction inst) noexcept {
+    thr.eval_stack.emplace(TFlag<VirtualAddress>, thr.process_memory_base().id_shift(inst.arg()));
+}
+
+
+void f_ref_at(Thread& thr, const Instruction inst) noexcept {
+    thr.eval_stack.emplace(TFlag<VirtualAddress>, thr.function_memory_base().id_shift(inst.arg()));
+}
+
+
+#define G_OP auto target = std::get<VirtualAddress>(thr.take());
+#define OP(TYPE) thr.eval_stack.emplace(TFlag<TYPE>, thr.deref<TYPE>(target));
 UNI_ALL_METHOD(FROM_REF_LOAD, load_by_ref)
 #undef OP
-#define OP(TYPE) {\
-            deref<TYPE>(target) = std::get<TYPE>(eval_stack.top());\
-            eval_stack.pop();\
-        }
+#define OP(TYPE) thr.deref<TYPE>(target) = std::get<TYPE>(thr.take());
 UNI_ALL_METHOD(TO_REF_STORE, store_by_ref)
 #undef OP
 #undef G_OP
 
 
-void Thread::ref_member(
-    const Instruction inst
+void ref_member(
+    Thread& thr, const Instruction inst
 ) noexcept {
-    const auto offset = deref<Array<MemberInfo>>(vm__top_obj_type().members)[inst.arg()].offset;
-    const auto obj_base_addr = std::get<VirtualAddress>(eval_stack.top());
-    eval_stack.pop();
-    eval_stack.emplace(TFlag<VirtualAddress>, obj_base_addr.offset_shift(static_cast<std::uint16_t>(offset)));
+    const auto offset = thr.deref<Array<MemberInfo>>(vm__top_obj_type(thr).members)[inst.arg()].offset;
+    thr.eval_stack.emplace(TFlag<VirtualAddress>,
+        std::get<VirtualAddress>(thr.take())
+        .offset_shift(static_cast<std::uint16_t>(offset)));
 }
 
-void Thread::ref_static_member(
-    const Instruction inst
+void ref_static_member(
+    Thread& thr, const Instruction inst
 ) noexcept {
-    const auto member_addr = deref<Array<VirtualAddress>>(vm__top_obj_type().members)[inst.arg()];
-    eval_stack.pop();
-    eval_stack.emplace(TFlag<VirtualAddress>, member_addr);
+    const auto& cls = vm__top_obj_type(thr);
+    const auto& member_offset = thr.deref<Array<VirtualAddress>>(cls.members)[inst.arg()].offset();
+    const auto base = std::get<VirtualAddress>(thr.take());
+    thr.eval_stack.emplace(TFlag<VirtualAddress>, base.offset_shift(member_offset));
 }
 
-void Thread::ref_method(const Instruction inst) noexcept {
-    const auto& cls = vm__top_obj_type();
-    const auto& method_ref = deref<Array<VirtualAddress>>(cls.methods)[inst.arg()];
-    eval_stack.emplace(TFlag<VirtualAddress>, method_ref);
+void ref_method(Thread& thr, const Instruction inst) noexcept {
+    const auto& cls = vm__top_obj_type(thr);
+    const auto& method_ref = thr.deref<Array<VirtualAddress>>(cls.methods)[inst.arg()];
+    thr.eval_stack.emplace(TFlag<VirtualAddress>, method_ref);
 }
 
-void Thread::ref_static_method(const Instruction inst) noexcept {
-    const auto& cls = vm__top_obj_type();
-    const auto& method_ref = deref<Array<VirtualAddress>>(cls.methods)[inst.arg()];
+void ref_static_method(Thread& thr, const Instruction inst) noexcept {
+    const auto& cls = vm__top_obj_type(thr);
+    const auto& method_ref = thr.deref<Array<VirtualAddress>>(cls.methods)[inst.arg()];
     // pop 'this', so static method won't receive it
-    eval_stack.pop();
-    eval_stack.emplace(TFlag<VirtualAddress>, method_ref);
+    thr.eval_stack.pop();
+    thr.eval_stack.emplace(TFlag<VirtualAddress>, method_ref);
 }
 
-void Thread::invoke_override(const Instruction inst) noexcept {
-    const auto ref = std::get<VirtualAddress>(eval_stack.top());
-    eval_stack.pop();
-    auto& family = deref<FFamily>(ref);
-    call_function(family, inst.arg());
+void invoke_override(Thread& thr, const Instruction inst) noexcept {
+    const auto ref = std::get<VirtualAddress>(thr.take());
+    const auto& family = thr.deref<FFamily>(ref);
+    thr.call_function(family, inst.arg());
 }
 
-void Thread::instate(const Instruction inst) noexcept {
-    const auto& cls = deref<Class>(std::get<VirtualAddress>(
-        eval_stack.top()
+void instate(Thread& thr, const Instruction inst) noexcept {
+    const auto& cls = thr.deref<Class>(std::get<VirtualAddress>(
+        thr.take()
     ));
-    eval_stack.pop();
-    call_function(deref<FFamily>(cls.maker), inst.arg());
-
+    thr.call_function(thr.deref<FFamily>(cls.maker), inst.arg());
 }
 
-void Thread::destroy() noexcept {
-    const auto& cls = vm__top_obj_type();
-    call_function(deref<FFamily>(cls.collector), 0);
+void destroy(Thread& thr) noexcept {
+    const auto& cls = vm__top_obj_type(thr);
+    thr.call_function(thr.deref<FFamily>(cls.collector), 0);
 }
 
 

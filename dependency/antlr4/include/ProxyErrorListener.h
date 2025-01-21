@@ -22,17 +22,17 @@ namespace antlr4 {
     void removeErrorListener(ANTLRErrorListener *listener);
     void removeErrorListeners();
 
-    void syntaxError(Recognizer *recognizer, Token *offendingSymbol, size_t line, size_t charPositionInLine,
+    void syntaxError(Recognizer *recognizer, Token *offendingSymbol, std::size_t line, std::size_t charPositionInLine,
                      const std::string &msg, std::exception_ptr e) override;
 
-    virtual void reportAmbiguity(Parser *recognizer, const dfa::DFA &dfa, size_t startIndex, size_t stopIndex, bool exact,
+    virtual void reportAmbiguity(Parser *recognizer, const dfa::DFA &dfa, std::size_t startIndex, std::size_t stopIndex, bool exact,
                                  const antlrcpp::BitSet &ambigAlts, atn::ATNConfigSet *configs) override;
 
-    virtual void reportAttemptingFullContext(Parser *recognizer, const dfa::DFA &dfa, size_t startIndex, size_t stopIndex,
+    virtual void reportAttemptingFullContext(Parser *recognizer, const dfa::DFA &dfa, std::size_t startIndex, std::size_t stopIndex,
       const antlrcpp::BitSet &conflictingAlts, atn::ATNConfigSet *configs) override;
 
-    virtual void reportContextSensitivity(Parser *recognizer, const dfa::DFA &dfa, size_t startIndex, size_t stopIndex,
-                                          size_t prediction, atn::ATNConfigSet *configs) override;
+    virtual void reportContextSensitivity(Parser *recognizer, const dfa::DFA &dfa, std::size_t startIndex, std::size_t stopIndex,
+                                          std::size_t prediction, atn::ATNConfigSet *configs) override;
   };
 
 } // namespace antlr4

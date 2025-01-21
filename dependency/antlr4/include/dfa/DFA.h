@@ -13,7 +13,7 @@ namespace dfa {
   class ANTLR4CPP_PUBLIC DFA final {
   private:
     struct DFAStateHasher final {
-      size_t operator()(const DFAState *dfaState) const {
+      std::size_t operator()(const DFAState *dfaState) const {
         return dfaState->hashCode();
       }
     };
@@ -32,10 +32,10 @@ namespace dfa {
     atn::DecisionState *atnStartState;
     std::unordered_set<DFAState*, DFAStateHasher, DFAStateComparer> states; // States are owned by this class.
     DFAState *s0;
-    size_t decision;
+    std::size_t decision;
 
     explicit DFA(atn::DecisionState *atnStartState);
-    DFA(atn::DecisionState *atnStartState, size_t decision);
+    DFA(atn::DecisionState *atnStartState, std::size_t decision);
     DFA(const DFA &other) = delete;
     DFA(DFA &&other);
     ~DFA();

@@ -20,8 +20,8 @@ namespace antlr4 {
     /// This is the method used to create tokens in the lexer and in the
     /// error handling strategy. If text!=null, than the start and stop positions
     /// are wiped to -1 in the text override is set in the CommonToken.
-    virtual std::unique_ptr<Symbol> create(std::pair<TokenSource *, CharStream *> source, size_t type, const std::string &text,
-      size_t channel, size_t start, size_t stop, size_t line, size_t charPositionInLine) = 0;
+    virtual std::unique_ptr<Symbol> create(std::pair<TokenSource *, CharStream *> source, std::size_t type, const std::string &text,
+      std::size_t channel, std::size_t start, std::size_t stop, std::size_t line, std::size_t charPositionInLine) = 0;
 
     /// Generically useful
     virtual std::unique_ptr<Symbol> create(size_t type, const std::string &text) = 0;

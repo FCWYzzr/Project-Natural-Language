@@ -36,14 +36,14 @@ namespace atn {
     ArrayPredictionContext(ArrayPredictionContext&&) = default;
 
     bool isEmpty() const override;
-    size_t size() const override;
+    std::size_t size() const override;
     const Ref<const PredictionContext>& getParent(size_t index) const override;
-    size_t getReturnState(size_t index) const override;
+    std::size_t getReturnState(size_t index) const override;
     bool equals(const PredictionContext &other) const override;
     std::string toString() const override;
 
   protected:
-    size_t hashCodeImpl() const override;
+    std::size_t hashCodeImpl() const override;
   };
 
 } // namespace atn

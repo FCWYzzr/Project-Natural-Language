@@ -1,14 +1,11 @@
 //
 // Created by FCWY on 24-12-28.
 //
-
+module;
+#include "project-nl.h"
 export module pnl.ll.collections;
 import pnl.ll.base;
-import <stack>;
-import <queue>;
-import <functional>;
-import <ranges>;
-import <variant>;
+
 
 export namespace pnl::ll::inline collections{
     template<typename T>
@@ -56,12 +53,10 @@ export namespace pnl::ll::inline collections{
             void waste_top() noexcept;
 
 
-            void waste_since(USize milestone) noexcept;
+            void waste_since(std::uint32_t milestone) noexcept;
 
             [[nodiscard]]
-            USize milestone() const noexcept {
-                return obj_offset.size();
-            }
+            std::uint32_t milestone() const noexcept;
 
             template<typename T>
             T& ref(const USize idx) noexcept {
@@ -207,4 +202,26 @@ export namespace pnl::ll::inline collections{
                 clear();
             }
         };
+
+
+    constexpr std::size_t operator ""_B (const std::size_t sz) noexcept {
+        return sz;
+    }
+    constexpr std::size_t operator ""_KB (const std::size_t sz) noexcept {
+        return operator""_B(sz) * 1024;
+    }
+    constexpr std::size_t operator ""_MB (const std::size_t sz) noexcept {
+        return operator""_KB(sz) * 1024;
+    }
+    constexpr std::size_t operator ""_GB (const std::size_t sz) noexcept {
+        return operator""_MB(sz) * 1024;
+    }
+
+    template<typename E>
+    void shrink_if_necessary(List<E>& v) noexcept {
+        if (v.empty() && v.capacity() * sizeof(E) >= 4_KB)
+            v.shrink_to_fit();
+        else if (v.capacity() >= v.size() * 1.5f)
+            v.shrink_to_fit();
+    }
 }

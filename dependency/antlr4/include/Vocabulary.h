@@ -62,7 +62,7 @@ namespace dfa {
     /// Returns the highest token type value. It can be used to iterate from
     /// zero to that number, inclusively, thus querying all stored entries. </summary>
     /// <returns> the highest token type value </returns>
-    constexpr size_t getMaxTokenType() const { return _maxTokenType; }
+    constexpr std::size_t getMaxTokenType() const { return _maxTokenType; }
 
     /// <summary>
     /// Gets the string literal associated with a token type. The string returned
@@ -170,7 +170,7 @@ namespace dfa {
     std::vector<std::string> const _literalNames;
     std::vector<std::string> const _symbolicNames;
     std::vector<std::string> const _displayNames;
-    const size_t _maxTokenType = 0;
+    const std::size_t _maxTokenType = 0;
   };
 
 } // namespace atn

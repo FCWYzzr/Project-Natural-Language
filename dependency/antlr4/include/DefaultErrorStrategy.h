@@ -356,7 +356,7 @@ namespace antlr4 {
 
     virtual std::string getSymbolText(Token *symbol);
 
-    virtual size_t getSymbolType(Token *symbol);
+    virtual std::size_t getSymbolType(Token *symbol);
 
     virtual std::string escapeWSAndQuote(const std::string &s) const;
 

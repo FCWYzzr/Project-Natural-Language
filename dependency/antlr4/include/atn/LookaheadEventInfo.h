@@ -18,7 +18,7 @@ namespace atn {
     ///  the outermost alt shown for a rule; left-recursive rules have
     ///  user-level alts that differ from the rewritten rule with a (...) block
     ///  and a (..)* loop.
-    size_t predictedAlt = 0;
+    std::size_t predictedAlt = 0;
 
     /// <summary>
     /// Constructs a new instance of the <seealso cref="LookaheadEventInfo"/> class with
@@ -34,8 +34,8 @@ namespace atn {
     /// <param name="fullCtx"> {@code true} if the current lookahead is part of an LL
     /// prediction; otherwise, {@code false} if the current lookahead is part of
     /// an SLL prediction </param>
-    LookaheadEventInfo(size_t decision, ATNConfigSet *configs, size_t predictedAlt, TokenStream *input, size_t startIndex,
-                       size_t stopIndex, bool fullCtx);
+    LookaheadEventInfo(size_t decision, ATNConfigSet *configs, std::size_t predictedAlt, TokenStream *input, std::size_t startIndex,
+                       std::size_t stopIndex, bool fullCtx);
   };
 
 } // namespace atn

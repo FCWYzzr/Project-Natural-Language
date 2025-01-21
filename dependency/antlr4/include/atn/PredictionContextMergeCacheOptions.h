@@ -38,7 +38,7 @@ namespace atn {
   public:
     PredictionContextMergeCacheOptions() = default;
 
-    size_t getMaxSize() const { return _maxSize; }
+    std::size_t getMaxSize() const { return _maxSize; }
 
     bool hasMaxSize() const { return getMaxSize() != std::numeric_limits<size_t>::max(); }
 
@@ -47,7 +47,7 @@ namespace atn {
       return *this;
     }
 
-    size_t getClearEveryN() const {
+    std::size_t getClearEveryN() const {
       return _clearEveryN;
     }
 
@@ -63,7 +63,7 @@ namespace atn {
     }
 
   private:
-    size_t _maxSize = std::numeric_limits<size_t>::max();
+    std::size_t _maxSize = std::numeric_limits<size_t>::max();
     uint64_t _clearEveryN = 1;
   };
 

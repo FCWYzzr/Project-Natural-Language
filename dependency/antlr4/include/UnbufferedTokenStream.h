@@ -20,7 +20,7 @@ namespace antlr4 {
 
     virtual Token* get(size_t i) const override;
     virtual Token* LT(ssize_t i) override;
-    virtual size_t LA(ssize_t i) override;
+    virtual std::size_t LA(ssize_t i) override;
 
     virtual TokenSource* getTokenSource() const override;
 
@@ -40,9 +40,9 @@ namespace antlr4 {
     /// </summary>
     virtual ssize_t mark() override;
     virtual void release(ssize_t marker) override;
-    virtual size_t index() override;
+    virtual std::size_t index() override;
     virtual void seek(size_t index) override;
-    virtual size_t size() override;
+    virtual std::size_t size() override;
     virtual std::string getSourceName() const override;
 
   protected:
@@ -65,7 +65,7 @@ namespace antlr4 {
     /// The {@code LT(1)} token is {@code tokens[p]}. If {@code p == n}, we are
     /// out of buffered tokens.
     /// </summary>
-    size_t _p;
+    std::size_t _p;
 
     /// <summary>
     /// Count up with <seealso cref="#mark mark()"/> and down with
@@ -94,7 +94,7 @@ namespace antlr4 {
     /// This value is used to set the token indexes if the stream provides tokens
     /// that implement <seealso cref="WritableToken"/>.
     /// </summary>
-    size_t _currentTokenIndex;
+    std::size_t _currentTokenIndex;
 
     virtual void sync(ssize_t want);
 
@@ -103,10 +103,10 @@ namespace antlr4 {
     /// actually added to the buffer. If the return value is less than {@code n},
     /// then EOF was reached before {@code n} tokens could be added.
     /// </summary>
-    virtual size_t fill(size_t n);
+    virtual std::size_t fill(size_t n);
     virtual void add(std::unique_ptr<Token> t);
 
-    size_t getBufferStartIndex() const;
+    std::size_t getBufferStartIndex() const;
 
   private:
     void InitializeInstanceFields();

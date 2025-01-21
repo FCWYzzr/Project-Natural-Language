@@ -29,36 +29,36 @@ namespace antlr4 {
     BufferedTokenStream& operator = (const BufferedTokenStream& other) = delete;
 
     virtual TokenSource* getTokenSource() const override;
-    virtual size_t index() override;
+    virtual std::size_t index() override;
     virtual ssize_t mark() override;
 
     virtual void release(ssize_t marker) override;
     virtual void reset();
     virtual void seek(size_t index) override;
 
-    virtual size_t size() override;
+    virtual std::size_t size() override;
     virtual void consume() override;
 
     virtual Token* get(size_t i) const override;
 
     /// Get all tokens from start..stop inclusively.
-    virtual std::vector<Token *> get(size_t start, size_t stop);
+    virtual std::vector<Token *> get(size_t start, std::size_t stop);
 
-    virtual size_t LA(ssize_t i) override;
+    virtual std::size_t LA(ssize_t i) override;
     virtual Token* LT(ssize_t k) override;
 
     /// Reset this token stream by setting its token source.
     virtual void setTokenSource(TokenSource *tokenSource);
     virtual std::vector<Token *> getTokens();
-    virtual std::vector<Token *> getTokens(size_t start, size_t stop);
+    virtual std::vector<Token *> getTokens(size_t start, std::size_t stop);
 
     /// <summary>
     /// Given a start and stop index, return a List of all tokens in
     ///  the token type BitSet.  Return null if no tokens were found.  This
     ///  method looks at both on and off channel tokens.
     /// </summary>
-    virtual std::vector<Token *> getTokens(size_t start, size_t stop, const std::vector<size_t> &types);
-    virtual std::vector<Token *> getTokens(size_t start, size_t stop, size_t ttype);
+    virtual std::vector<Token *> getTokens(size_t start, std::size_t stop, const std::vector<size_t> &types);
+    virtual std::vector<Token *> getTokens(size_t start, std::size_t stop, std::size_t ttype);
 
     /// Collect all tokens on specified channel to the right of
     ///  the current token up until we see a token on DEFAULT_TOKEN_CHANNEL or
@@ -120,7 +120,7 @@ namespace antlr4 {
      */
     // ml: since -1 requires to make this member signed for just this single aspect we use a member _needSetup instead.
     //     Use bool isInitialized() to find out if this stream has started reading.
-    size_t _p;
+    std::size_t _p;
 
     /**
      * Indicates whether the {@link Token#EOF} token has been fetched from
@@ -149,7 +149,7 @@ namespace antlr4 {
     /// Add {@code n} elements to buffer.
     /// </summary>
     /// <returns> The actual number of elements added to the buffer. </returns>
-    virtual size_t fetch(size_t n);
+    virtual std::size_t fetch(size_t n);
 
     virtual Token* LB(size_t k);
 
@@ -174,7 +174,7 @@ namespace antlr4 {
      * the EOF token if there are no tokens on channel between {@code i} and
      * EOF.
      */
-    virtual ssize_t nextTokenOnChannel(size_t i, size_t channel);
+    virtual ssize_t nextTokenOnChannel(size_t i, std::size_t channel);
 
     /**
      * Given a starting index, return the index of the previous token on
@@ -186,9 +186,9 @@ namespace antlr4 {
      * index is returned. This is due to the fact that the EOF token is treated
      * as though it were on every channel.</p>
      */
-    virtual ssize_t previousTokenOnChannel(size_t i, size_t channel);
+    virtual ssize_t previousTokenOnChannel(size_t i, std::size_t channel);
 
-    virtual std::vector<Token *> filterForChannel(size_t from, size_t to, ssize_t channel);
+    virtual std::vector<Token *> filterForChannel(size_t from, std::size_t to, ssize_t channel);
 
     bool isInitialized() const;
 

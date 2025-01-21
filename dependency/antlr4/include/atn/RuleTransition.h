@@ -17,7 +17,7 @@ namespace atn {
     static bool is(const Transition *transition) { return transition != nullptr && is(*transition); }
 
     /// Ptr to the rule definition object for this rule ref.
-    const size_t ruleIndex; // no Rule object at runtime
+    const std::size_t ruleIndex; // no Rule object at runtime
 
     const int precedence;
 
@@ -25,15 +25,15 @@ namespace atn {
     ATNState *followState;
 
     /// @deprecated Use
-    /// <seealso cref="#RuleTransition(RuleStartState, size_t, int, ATNState)"/> instead.
-    RuleTransition(RuleStartState *ruleStart, size_t ruleIndex, ATNState *followState);
+    /// <seealso cref="#RuleTransition(RuleStartState, std::size_t, int, ATNState)"/> instead.
+    RuleTransition(RuleStartState *ruleStart, std::size_t ruleIndex, ATNState *followState);
 
-    RuleTransition(RuleStartState *ruleStart, size_t ruleIndex, int precedence, ATNState *followState);
+    RuleTransition(RuleStartState *ruleStart, std::size_t ruleIndex, int precedence, ATNState *followState);
     RuleTransition(RuleTransition const&) = delete;
     RuleTransition& operator=(RuleTransition const&) = delete;
 
     virtual bool isEpsilon() const override;
-    virtual bool matches(size_t symbol, size_t minVocabSymbol, size_t maxVocabSymbol) const override;
+    virtual bool matches(size_t symbol, std::size_t minVocabSymbol, std::size_t maxVocabSymbol) const override;
 
     virtual std::string toString() const override;
   };

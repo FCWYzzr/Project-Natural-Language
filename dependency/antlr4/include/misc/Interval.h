@@ -13,7 +13,7 @@ namespace misc {
   // Helpers to convert certain unsigned symbols (e.g. Token::EOF) to their original numeric value (e.g. -1)
   // and vice versa. This is needed mostly for intervals to keep their original order and for toString()
   // methods to print the original numeric value (e.g. for tests).
-  constexpr size_t numericToSymbol(ssize_t v) { return static_cast<size_t>(v); }
+  constexpr std::size_t numericToSymbol(ssize_t v) { return static_cast<size_t>(v); }
   constexpr ssize_t symbolToNumeric(size_t v) { return static_cast<ssize_t>(v); }
 
   /// An immutable inclusive interval a..b
@@ -27,17 +27,17 @@ namespace misc {
 
     constexpr Interval() : Interval(static_cast<ssize_t>(-1), static_cast<ssize_t>(-2)) {}
 
-    constexpr explicit Interval(size_t a_, size_t b_) : Interval(symbolToNumeric(a_), symbolToNumeric(b_)) {}
+    constexpr explicit Interval(size_t a_, std::size_t b_) : Interval(symbolToNumeric(a_), symbolToNumeric(b_)) {}
 
     constexpr Interval(ssize_t a_, ssize_t b_) : a(a_), b(b_) {}
 
     /// return number of elements between a and b inclusively. x..x is length 1.
     ///  if b < a, then length is 0.  9..10 has length 2.
-    constexpr size_t length() const { return b >= a ? static_cast<size_t>(b - a + 1) : 0; }
+    constexpr std::size_t length() const { return b >= a ? static_cast<size_t>(b - a + 1) : 0; }
 
     constexpr bool operator==(const Interval &other) const { return a == other.a && b == other.b; }
 
-    size_t hashCode() const;
+    std::size_t hashCode() const;
 
     /// <summary>
     /// Does this start completely before other? Disjoint </summary>

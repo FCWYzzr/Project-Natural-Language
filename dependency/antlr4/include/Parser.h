@@ -191,7 +191,7 @@ namespace antlr4 {
     /// incremented each time <seealso cref="#notifyErrorListeners"/> is called.
     /// </summary>
     /// <seealso cref= #notifyErrorListeners </seealso>
-    virtual size_t getNumberOfSyntaxErrors();
+    virtual std::size_t getNumberOfSyntaxErrors();
 
     virtual TokenFactory<CommonToken>* getTokenFactory() override;
 
@@ -270,11 +270,11 @@ namespace antlr4 {
 
     /// Always called by generated parsers upon entry to a rule. Access field
     /// <seealso cref="#_ctx"/> get the current context.
-    virtual void enterRule(ParserRuleContext *localctx, size_t state, size_t ruleIndex);
+    virtual void enterRule(ParserRuleContext *localctx, std::size_t state, std::size_t ruleIndex);
 
     void exitRule();
 
-    virtual void enterOuterAlt(ParserRuleContext *localctx, size_t altNum);
+    virtual void enterOuterAlt(ParserRuleContext *localctx, std::size_t altNum);
 
     /**
      * Get the precedence level for the top-most precedence rule.
@@ -286,13 +286,13 @@ namespace antlr4 {
 
     /// @deprecated Use
     /// <seealso cref="#enterRecursionRule(ParserRuleContext, int, int, int)"/> instead.
-    virtual void enterRecursionRule(ParserRuleContext *localctx, size_t ruleIndex);
-    virtual void enterRecursionRule(ParserRuleContext *localctx, size_t state, size_t ruleIndex, int precedence);
+    virtual void enterRecursionRule(ParserRuleContext *localctx, std::size_t ruleIndex);
+    virtual void enterRecursionRule(ParserRuleContext *localctx, std::size_t state, std::size_t ruleIndex, int precedence);
 
     /** Like {@link #enterRule} but for recursive rules.
      *  Make the current context the child of the incoming localctx.
      */
-    virtual void pushNewRecursionContext(ParserRuleContext *localctx, size_t state, size_t ruleIndex);
+    virtual void pushNewRecursionContext(ParserRuleContext *localctx, std::size_t state, std::size_t ruleIndex);
     virtual void unrollRecursionContexts(ParserRuleContext *parentctx);
     virtual ParserRuleContext* getInvokingContext(size_t ruleIndex);
     virtual ParserRuleContext* getContext();
@@ -328,7 +328,7 @@ namespace antlr4 {
     virtual misc::IntervalSet getExpectedTokensWithinCurrentRule();
 
     /// Get a rule's index (i.e., {@code RULE_ruleName} field) or INVALID_INDEX if not found.
-    virtual size_t getRuleIndex(const std::string &ruleName);
+    virtual std::size_t getRuleIndex(const std::string &ruleName);
 
     virtual ParserRuleContext* getRuleContext();
 
@@ -437,7 +437,7 @@ namespace antlr4 {
     /// The number of syntax errors reported during parsing. This value is
     /// incremented each time <seealso cref="#notifyErrorListeners"/> is called.
     /// </summary>
-    size_t _syntaxErrors;
+    std::size_t _syntaxErrors;
 
     /** Indicates parser has match()ed EOF token. See {@link #exitRule()}. */
     bool _matchedEOF;

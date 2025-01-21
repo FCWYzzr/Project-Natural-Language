@@ -1,39 +1,41 @@
 project(LowerLevel C CXX)
 
-get_property(loc GLOBAL PROPERTY loc)
-get_property(includes GLOBAL PROPERTY dep-includes)
-get_property(libs GLOBAL PROPERTY dep-libs)
-get_property(antlr4-header GLOBAL PROPERTY antlr4-header)
-get_property(antlr4-lib GLOBAL PROPERTY antlr4-lib)
+get_property(dependencies GLOBAL PROPERTY dependencies)
+foreach (dep ${dependencies})
+    get_property(${dep} GLOBAL PROPERTY "${dep}")
+    get_property("${dep}-headers" GLOBAL PROPERTY "${dep}-headers")
+endforeach ()
 
 
 # PNL Lib
-
 file(GLOB_RECURSE PNL-Lower-Level-interface
     lib/*.cppm
+    lib/*.h
 )
 
 file(GLOB_RECURSE PNL-Lower-Level-impl
     lib/*.cpp
-    lib/*.c
 )
 
 set(LIB-DIR "${loc}")
 set(TGT-DIR ${LIB-DIR})
-add_library(NL_LL SHARED
+add_library(nl-ll SHARED
     ${PNL-Lower-Level-interface}
     ${PNL-Lower-Level-impl}
 )
-target_compile_definitions(NL_LL PUBLIC
-    DLFCN_WIN32_SHARED
-    DLFCN_WIN32_EXPORTS
-    PNL_LIB_PREFIX=__declspec\(dllexport\)
+target_link_libraries(nl-ll
+    ${dlfcn}
+    ${libiconv}
 )
-if (${CMAKE_CXX_COMPILER} STREQUAL "MSVC")
-    link_options(
-        /NXCOMPAT:NO
-    )
-endif ()
+target_include_directories(nl-ll PUBLIC
+    ${PNL-header}
+    ${dlfcn-headers}
+    ${libiconv-headers}
+)
+target_compile_definitions(nl-ll PUBLIC
+    "PNL_LIB_PREFIX=${EXPORT}"
+)
+
 
 add_subdirectory(builtins)
 
@@ -42,31 +44,42 @@ file(GLOB_RECURSE nlsm-src
     nlsm/*.cpp
     nlsm/*.cppm
 )
-include_directories(nlsm/antlr_gen)
-add_executable(NLSM
+add_executable(nlsm
     ${nlsm-src}
     ${PNL-Lower-Level-interface}
 )
-target_link_libraries(NLSM
-    NL_LL
-    ${antlr4-lib}
+target_include_directories(nlsm PUBLIC
+    nlsm/antlr_gen
+    ${PNL-header}
+    ${dlfcn-headers}
+    ${libiconv-headers}
+    ${antlr4-headers}
 )
-add_compile_definitions(
-    DLFCN_WIN32_SHARED
+target_link_libraries(nlsm
+    nl-ll
+    ${antlr4}
 )
-
+target_compile_definitions(nlsm PUBLIC
+    "PNL_LIB_PREFIX=${IMPORT}"
+)
 
 
 file(GLOB_RECURSE nlvm-src
     nlvm/*.cpp
     nlvm/*.cppm
 )
-add_executable(NLVM
+add_executable(nlvm
     ${nlvm-src}
     ${PNL-Lower-Level-interface}
 )
-target_link_libraries(NLVM
-    NL_LL
+target_include_directories(nlvm PUBLIC
+    ${PNL-header}
+)
+target_link_libraries(nlvm
+    nl-ll
+)
+target_compile_definitions(nlsm PUBLIC
+    "PNL_LIB_PREFIX=${IMPORT}"
 )
 
 
@@ -78,6 +91,6 @@ add_compile_definitions(
 )
 
 install(FILES ${PNL-Lower-Level-interface} DESTINATION "${loc}/module/ll")
-install(TARGETS NL_LL DESTINATION "${loc}/LL")
-install(TARGETS NLSM DESTINATION "${loc}/LL")
-install(TARGETS NLVM DESTINATION "${loc}/LL")
+install(TARGETS nl-ll DESTINATION "${loc}/bin")
+install(TARGETS nlsm DESTINATION "${loc}/bin")
+install(TARGETS nlvm DESTINATION "${loc}/bin")

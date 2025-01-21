@@ -17,7 +17,7 @@ namespace atn {
     static bool is(const Transition *transition) { return transition != nullptr && is(*transition); }
 
     explicit EpsilonTransition(ATNState *target);
-    EpsilonTransition(ATNState *target, size_t outermostPrecedenceReturn);
+    EpsilonTransition(ATNState *target, std::size_t outermostPrecedenceReturn);
 
     /**
      * @return the rule index of a precedence rule for which this transition is
@@ -27,15 +27,15 @@ namespace atn {
      * @see ParserATNSimulator#applyPrecedenceFilter(ATNConfigSet)
      * @since 4.4.1
      */
-    size_t outermostPrecedenceReturn() const;
+    std::size_t outermostPrecedenceReturn() const;
 
     virtual bool isEpsilon() const override;
-    virtual bool matches(size_t symbol, size_t minVocabSymbol, size_t maxVocabSymbol) const override;
+    virtual bool matches(size_t symbol, std::size_t minVocabSymbol, std::size_t maxVocabSymbol) const override;
 
     virtual std::string toString() const override;
 
   private:
-    const size_t _outermostPrecedenceReturn; // A rule index.
+    const std::size_t _outermostPrecedenceReturn; // A rule index.
   };
 
 } // namespace atn

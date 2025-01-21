@@ -25,11 +25,11 @@ namespace atn {
   public:
     struct Hasher
     {
-      size_t operator()(Ref<ATNConfig> const& k) const {
+      std::size_t operator()(Ref<ATNConfig> const& k) const {
         return k->hashCode();
       }
 
-      size_t operator()(ATNConfig const& k) const {
+      std::size_t operator()(ATNConfig const& k) const {
         return k.hashCode();
       }
     };
@@ -50,7 +50,7 @@ namespace atn {
     ATNState *state = nullptr;
 
     /// What alt (or lexer rule) is predicted by this configuration.
-    const size_t alt = 0;
+    const std::size_t alt = 0;
 
     /// The stack of invoking states leading to the rule/states associated
     /// with this config.  We track only those contexts pushed during
@@ -82,13 +82,13 @@ namespace atn {
      * {@link ATNConfigSet#add(ATNConfig, DoubleKeyMap)} method are
      * <em>completely</em> unaffected by the change.</p>
      */
-    size_t reachesIntoOuterContext = 0;
+    std::size_t reachesIntoOuterContext = 0;
 
     /// Can be shared between multiple ATNConfig instances.
     Ref<const SemanticContext> semanticContext;
 
-    ATNConfig(ATNState *state, size_t alt, Ref<const PredictionContext> context);
-    ATNConfig(ATNState *state, size_t alt, Ref<const PredictionContext> context, Ref<const SemanticContext> semanticContext);
+    ATNConfig(ATNState *state, std::size_t alt, Ref<const PredictionContext> context);
+    ATNConfig(ATNState *state, std::size_t alt, Ref<const PredictionContext> context, Ref<const SemanticContext> semanticContext);
 
     ATNConfig(ATNConfig const& other, Ref<const SemanticContext> semanticContext);
     ATNConfig(ATNConfig const& other, ATNState *state);
@@ -102,14 +102,14 @@ namespace atn {
 
     virtual ~ATNConfig() = default;
 
-    virtual size_t hashCode() const;
+    virtual std::size_t hashCode() const;
 
     /**
      * This method gets the value of the {@link #reachesIntoOuterContext} field
      * as it existed prior to the introduction of the
      * {@link #isPrecedenceFilterSuppressed} method.
      */
-    size_t getOuterContextDepth() const;
+    std::size_t getOuterContextDepth() const;
     bool isPrecedenceFilterSuppressed() const;
     void setPrecedenceFilterSuppressed(bool value);
 
@@ -123,7 +123,7 @@ namespace atn {
     std::string toString(bool showAlt) const;
 
   private:
-    ATNConfig(ATNState *state, size_t alt, Ref<const PredictionContext> context, size_t reachesIntoOuterContext, Ref<const SemanticContext> semanticContext);
+    ATNConfig(ATNState *state, std::size_t alt, Ref<const PredictionContext> context, std::size_t reachesIntoOuterContext, Ref<const SemanticContext> semanticContext);
   };
 
 } // namespace atn
@@ -137,7 +137,7 @@ namespace std {
 
   template <> struct hash<ATNConfig>
   {
-    size_t operator() (const ATNConfig &x) const
+    std::size_t operator() (const ATNConfig &x) const
     {
       return x.hashCode();
     }
@@ -145,7 +145,7 @@ namespace std {
 
   template <> struct hash<std::vector<Ref<ATNConfig>>>
   {
-    size_t operator() (const std::vector<Ref<ATNConfig>> &vector) const
+    std::size_t operator() (const std::vector<Ref<ATNConfig>> &vector) const
     {
       std::size_t seed = 0;
       for (const auto &config : vector) {

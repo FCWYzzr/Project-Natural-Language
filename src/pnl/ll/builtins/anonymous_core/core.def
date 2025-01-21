@@ -1,4 +1,4 @@
-LIBRARY NLCore
+LIBRARY nlrt_core
 EXPORTS
     RTUObject::()=?maker@RTUObject@@YAXAEAUThread@runtime@ll@pnl@@@Z            @1
     RTUObject::~()=?collector@RTUObject@@YAXAEAUThread@runtime@ll@pnl@@@Z       @2

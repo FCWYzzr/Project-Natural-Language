@@ -22,12 +22,12 @@ namespace atn {
 
   class ANTLR4CPP_PUBLIC ATN {
   public:
-    static constexpr size_t INVALID_ALT_NUMBER = 0;
+    static constexpr std::size_t INVALID_ALT_NUMBER = 0;
 
     /// Used for runtime deserialization of ATNs from strings.
     ATN();
 
-    ATN(ATNType grammarType, size_t maxTokenType);
+    ATN(ATNType grammarType, std::size_t maxTokenType);
 
     ATN(const ATN&) = delete;
 
@@ -56,7 +56,7 @@ namespace atn {
     ATNType grammarType;
 
     /// The maximum value for any symbol recognized by a transition in the ATN.
-    size_t maxTokenType;
+    std::size_t maxTokenType;
 
     /// <summary>
     /// For lexer ATNs, this maps the rule index to the resulting token type.
@@ -96,7 +96,7 @@ namespace atn {
 
     DecisionState *getDecisionState(size_t decision) const;
 
-    size_t getNumberOfDecisions() const;
+    std::size_t getNumberOfDecisions() const;
 
     /// <summary>
     /// Computes the set of input symbols which could follow ATN state number

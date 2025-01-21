@@ -35,7 +35,7 @@ namespace atn {
     /// <param name="fullCtx"> {@code true} if the syntax error was identified during LL
     /// prediction; otherwise, {@code false} if the syntax error was identified
     /// during SLL prediction </param>
-    ErrorInfo(size_t decision, ATNConfigSet *configs, TokenStream *input, size_t startIndex, size_t stopIndex,
+    ErrorInfo(size_t decision, ATNConfigSet *configs, TokenStream *input, std::size_t startIndex, std::size_t stopIndex,
               bool fullCtx);
   };
 

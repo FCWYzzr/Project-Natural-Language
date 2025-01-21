@@ -9,13 +9,12 @@
  * ready to co-operate with others' objects,
  * and serializable (using pnl.ll:serialise)
  */
-
+module;
+#include "project-nl.h"
 export module pnl.ll.comtime;
 import pnl.ll.base;
 import pnl.ll.collections;
-import <utility>;
-import <variant>;
-import <ranges>;
+
 
 
 export namespace pnl::ll::inline comtime{
@@ -28,7 +27,7 @@ export namespace pnl::ll::inline comtime{
 
 
     using ObjRefRepr = Str;
-    using NtvId = NStr;
+    using NtvId = MBStr;
 
 
     using CTValue = std::variant<

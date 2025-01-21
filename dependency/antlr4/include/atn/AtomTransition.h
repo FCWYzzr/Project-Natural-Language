@@ -19,12 +19,12 @@ namespace atn {
 
     /// The token type or character value; or, signifies special label.
     /// TODO: rename this to label
-    const size_t _label;
+    const std::size_t _label;
 
-    AtomTransition(ATNState *target, size_t label);
+    AtomTransition(ATNState *target, std::size_t label);
 
     virtual misc::IntervalSet label() const override;
-    virtual bool matches(size_t symbol, size_t minVocabSymbol, size_t maxVocabSymbol) const override;
+    virtual bool matches(size_t symbol, std::size_t minVocabSymbol, std::size_t maxVocabSymbol) const override;
 
     virtual std::string toString() const override;
   };

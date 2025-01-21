@@ -14,7 +14,7 @@ namespace antlr4 {
 namespace atn {
 
   // Constants for ATNState serialization.
-  enum class ATNStateType : size_t {
+  enum class ATNStateType : std::size_t {
     INVALID = 0,
     BASIC = 1,
     RULE_START = 2,

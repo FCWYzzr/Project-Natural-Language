@@ -46,7 +46,7 @@ namespace antlr4 {
     /// Begin parsing at startRuleIndex
     virtual ParserRuleContext* parse(size_t startRuleIndex);
 
-    virtual void enterRecursionRule(ParserRuleContext *localctx, size_t state, size_t ruleIndex, int precedence) override;
+    virtual void enterRecursionRule(ParserRuleContext *localctx, std::size_t state, std::size_t ruleIndex, int precedence) override;
 
 
     /** Override this parser interpreters normal decision-making process
@@ -125,14 +125,14 @@ namespace antlr4 {
      *  Those values are used to create new recursive rule invocation contexts
      *  associated with left operand of an alt like "expr '*' expr".
      */
-    std::stack<std::pair<ParserRuleContext *, size_t>> _parentContextStack;
+    std::stack<std::pair<ParserRuleContext *, std::size_t>> _parentContextStack;
 
     /** We need a map from (decision,inputIndex)->forced alt for computing ambiguous
      *  parse trees. For now, we allow exactly one override.
      */
     int _overrideDecision = -1;
-    size_t _overrideDecisionInputIndex = INVALID_INDEX;
-    size_t _overrideDecisionAlt = INVALID_INDEX;
+    std::size_t _overrideDecisionInputIndex = INVALID_INDEX;
+    std::size_t _overrideDecisionAlt = INVALID_INDEX;
     bool _overrideDecisionReached = false; // latch and only override once; error might trigger infinite loop
 
     /** What is the current context when we override a decision? This tells
@@ -149,12 +149,12 @@ namespace antlr4 {
      *  a decision state (instance of DecisionState). It gives an opportunity
      *  for subclasses to track interesting things.
      */
-    size_t visitDecisionState(atn::DecisionState *p);
+    std::size_t visitDecisionState(atn::DecisionState *p);
 
     /** Provide simple "factory" for InterpreterRuleContext's.
      *  @since 4.5.1
      */
-    InterpreterRuleContext* createInterpreterRuleContext(ParserRuleContext *parent, size_t invokingStateNumber, size_t ruleIndex);
+    InterpreterRuleContext* createInterpreterRuleContext(ParserRuleContext *parent, std::size_t invokingStateNumber, std::size_t ruleIndex);
 
     virtual void visitRuleStopState(atn::ATNState *p);
 

@@ -24,7 +24,7 @@ namespace atn {
 
     // TODO: these fields make me pretty uncomfortable but nice to pack up info together, saves recomputation
     // TODO: can we track conflicts as they are added to save scanning configs later?
-    size_t uniqueAlt = 0;
+    std::size_t uniqueAlt = 0;
 
     /** Currently this is only used when we detect SLL conflict; this does
      *  not necessarily represent the ambiguous alternatives. In fact,
@@ -86,13 +86,13 @@ namespace atn {
 
     void optimizeConfigs(ATNSimulator *interpreter);
 
-    size_t size() const;
+    std::size_t size() const;
     bool isEmpty() const;
     void clear();
     bool isReadonly() const;
     void setReadonly(bool readonly);
 
-    virtual size_t hashCode() const;
+    virtual std::size_t hashCode() const;
 
     virtual bool equals(const ATNConfigSet &other) const;
 
@@ -102,7 +102,7 @@ namespace atn {
     struct ATNConfigHasher final {
       const ATNConfigSet* atnConfigSet;
 
-      size_t operator()(const ATNConfig *other) const {
+      std::size_t operator()(const ATNConfig *other) const {
         assert(other != nullptr);
         return atnConfigSet->hashCode(*other);
       }
@@ -127,7 +127,7 @@ namespace atn {
     /// we've made this readonly.
     bool _readonly = false;
 
-    virtual size_t hashCode(const ATNConfig &atnConfig) const;
+    virtual std::size_t hashCode(const ATNConfig &atnConfig) const;
 
     virtual bool equals(const ATNConfig &lhs, const ATNConfig &rhs) const;
 
@@ -149,7 +149,7 @@ namespace std {
 
 template <>
 struct hash<::antlr4::atn::ATNConfigSet> {
-  size_t operator()(const ::antlr4::atn::ATNConfigSet &atnConfigSet) const {
+  std::size_t operator()(const ::antlr4::atn::ATNConfigSet &atnConfigSet) const {
     return atnConfigSet.hashCode();
   }
 };

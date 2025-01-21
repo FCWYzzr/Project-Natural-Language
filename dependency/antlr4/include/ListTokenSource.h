@@ -35,7 +35,7 @@ namespace antlr4 {
     /// The index into <seealso cref="#tokens"/> of token to return by the next call to
     /// <seealso cref="#nextToken"/>. The end of the input is indicated by this value
     /// being greater than or equal to the number of items in <seealso cref="#tokens"/>.
-    size_t i;
+    std::size_t i;
 
   private:
     /// This is the backing field for <seealso cref="#getTokenFactory"/> and
@@ -68,9 +68,9 @@ namespace antlr4 {
     /// <exception cref="NullPointerException"> if {@code tokens} is {@code null} </exception>
     ListTokenSource(std::vector<std::unique_ptr<Token>> tokens_, const std::string &sourceName_);
 
-    virtual size_t getCharPositionInLine() override;
+    virtual std::size_t getCharPositionInLine() override;
     virtual std::unique_ptr<Token> nextToken() override;
-    virtual size_t getLine() const override;
+    virtual std::size_t getLine() const override;
     virtual CharStream* getInputStream() override;
     virtual std::string getSourceName() override;
 

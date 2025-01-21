@@ -142,7 +142,7 @@ namespace misc {
     /// Return a list of Interval objects. </summary>
     std::vector<Interval> const& getIntervals() const;
 
-    size_t hashCode() const;
+    std::size_t hashCode() const;
 
     /// Are two IntervalSets equal?  Because all intervals are sorted
     ///  and disjoint, equals is a simple linear walk over both lists
@@ -157,7 +157,7 @@ namespace misc {
     std::string elementName(const dfa::Vocabulary &vocabulary, ssize_t a) const;
 
   public:
-    size_t size() const;
+    std::size_t size() const;
     std::vector<ssize_t> toList() const;
     std::set<ssize_t> toSet() const;
 
@@ -182,7 +182,7 @@ namespace std {
 
   template <> struct hash<IntervalSet>
   {
-    size_t operator() (const IntervalSet &x) const
+    std::size_t operator() (const IntervalSet &x) const
     {
       return x.hashCode();
     }

@@ -11,7 +11,7 @@ namespace antlrcpp {
 
   class ANTLR4CPP_PUBLIC BitSet : public std::bitset<2048> {
   public:
-    size_t nextSetBit(size_t pos) const {
+    std::size_t nextSetBit(size_t pos) const {
       for (size_t i = pos; i < size(); i++){
         if (test(i)) {
           return i;
@@ -25,7 +25,7 @@ namespace antlrcpp {
     friend std::wostream& operator << (std::wostream& os, const BitSet& obj)
     {
       os << "{";
-      size_t total = obj.count();
+      std::size_t total = obj.count();
       for (size_t i = 0; i < obj.size(); i++){
         if (obj.test(i)){
           os << i;

@@ -18,17 +18,17 @@ namespace atn {
   class ANTLR4CPP_PUBLIC LexerATNSimulator : public ATNSimulator {
   protected:
     struct ANTLR4CPP_PUBLIC SimState final {
-      size_t index = INVALID_INDEX;
-      size_t line = 0;
-      size_t charPos = INVALID_INDEX;
+      std::size_t index = INVALID_INDEX;
+      std::size_t line = 0;
+      std::size_t charPos = INVALID_INDEX;
       dfa::DFAState *dfaState = nullptr;
 
       void reset();
     };
 
   public:
-    static constexpr size_t MIN_DFA_EDGE = 0;
-    static constexpr size_t MAX_DFA_EDGE = 127; // forces unicode to stay in ATN
+    static constexpr std::size_t MIN_DFA_EDGE = 0;
+    static constexpr std::size_t MAX_DFA_EDGE = 127; // forces unicode to stay in ATN
 
   protected:
     /// <summary>
@@ -53,19 +53,19 @@ namespace atn {
     ///  Shared across DFA to ATN simulation in case the ATN fails and the
     ///  DFA did not have a previous accept state. In this case, we use the
     ///  ATN-generated exception object.
-    size_t _startIndex;
+    std::size_t _startIndex;
 
     /// line number 1..n within the input.
-    size_t _line;
+    std::size_t _line;
 
     /// The index of the character relative to the beginning of the line 0..n-1.
-    size_t _charPositionInLine;
+    std::size_t _charPositionInLine;
 
   public:
     std::vector<dfa::DFA> &_decisionToDFA;
 
   protected:
-    size_t _mode;
+    std::size_t _mode;
 
     /// Used during DFA/ATN exec to record the most recent accept configuration info.
     SimState _prevAccept;
@@ -76,14 +76,14 @@ namespace atn {
     virtual ~LexerATNSimulator() = default;
 
     virtual void copyState(LexerATNSimulator *simulator);
-    virtual size_t match(CharStream *input, size_t mode);
+    virtual std::size_t match(CharStream *input, std::size_t mode);
     virtual void reset() override;
 
     virtual void clearDFA() override;
 
   protected:
-    virtual size_t matchATN(CharStream *input);
-    virtual size_t execATN(CharStream *input, dfa::DFAState *ds0);
+    virtual std::size_t matchATN(CharStream *input);
+    virtual std::size_t execATN(CharStream *input, dfa::DFAState *ds0);
 
     /// <summary>
     /// Get an existing target state for an edge in the DFA. If the target state
@@ -95,7 +95,7 @@ namespace atn {
     /// <returns> The existing target DFA state for the given input symbol
     /// {@code t}, or {@code null} if the target state for this edge is not
     /// already cached </returns>
-    virtual dfa::DFAState *getExistingTargetState(dfa::DFAState *s, size_t t);
+    virtual dfa::DFAState *getExistingTargetState(dfa::DFAState *s, std::size_t t);
 
     /// <summary>
     /// Compute a target state for an edge in the DFA, and attempt to add the
@@ -108,9 +108,9 @@ namespace atn {
     /// <returns> The computed target DFA state for the given input symbol
     /// {@code t}. If {@code t} does not lead to a valid DFA state, this method
     /// returns <seealso cref="#ERROR"/>. </returns>
-    virtual dfa::DFAState *computeTargetState(CharStream *input, dfa::DFAState *s, size_t t);
+    virtual dfa::DFAState *computeTargetState(CharStream *input, dfa::DFAState *s, std::size_t t);
 
-    virtual size_t failOrAccept(CharStream *input, ATNConfigSet *reach, size_t t);
+    virtual std::size_t failOrAccept(CharStream *input, ATNConfigSet *reach, std::size_t t);
 
     /// <summary>
     /// Given a starting configuration set, figure out all ATN configurations
@@ -118,12 +118,12 @@ namespace atn {
     ///  parameter.
     /// </summary>
     void getReachableConfigSet(CharStream *input, ATNConfigSet *closure_, // closure_ as we have a closure() already
-                               ATNConfigSet *reach, size_t t);
+                               ATNConfigSet *reach, std::size_t t);
 
-    virtual void accept(CharStream *input, const Ref<const LexerActionExecutor> &lexerActionExecutor, size_t startIndex, size_t index,
-                        size_t line, size_t charPos);
+    virtual void accept(CharStream *input, const Ref<const LexerActionExecutor> &lexerActionExecutor, std::size_t startIndex, std::size_t index,
+                        std::size_t line, std::size_t charPos);
 
-    virtual ATNState *getReachableTarget(const Transition *trans, size_t t);
+    virtual ATNState *getReachableTarget(const Transition *trans, std::size_t t);
 
     virtual std::unique_ptr<ATNConfigSet> computeStartState(CharStream *input, ATNState *p);
 
@@ -163,11 +163,11 @@ namespace atn {
     /// </param>
     /// <returns> {@code true} if the specified predicate evaluates to
     /// {@code true}. </returns>
-    virtual bool evaluatePredicate(CharStream *input, size_t ruleIndex, size_t predIndex, bool speculative);
+    virtual bool evaluatePredicate(CharStream *input, std::size_t ruleIndex, std::size_t predIndex, bool speculative);
 
     virtual void captureSimState(CharStream *input, dfa::DFAState *dfaState);
-    virtual dfa::DFAState* addDFAEdge(dfa::DFAState *from, size_t t, ATNConfigSet *q);
-    virtual void addDFAEdge(dfa::DFAState *p, size_t t, dfa::DFAState *q);
+    virtual dfa::DFAState* addDFAEdge(dfa::DFAState *from, std::size_t t, ATNConfigSet *q);
+    virtual void addDFAEdge(dfa::DFAState *p, std::size_t t, dfa::DFAState *q);
 
     /// <summary>
     /// Add a new DFA state if there isn't one with this set of
@@ -184,9 +184,9 @@ namespace atn {
 
     /// Get the text matched so far for the current token.
     virtual std::string getText(CharStream *input);
-    virtual size_t getLine() const;
+    virtual std::size_t getLine() const;
     virtual void setLine(size_t line);
-    virtual size_t getCharPositionInLine();
+    virtual std::size_t getCharPositionInLine();
     virtual void setCharPositionInLine(size_t charPositionInLine);
     virtual void consume(CharStream *input);
     virtual std::string getTokenName(size_t t);

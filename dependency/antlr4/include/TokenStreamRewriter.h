@@ -88,8 +88,8 @@ namespace antlr4 {
   class ANTLR4CPP_PUBLIC TokenStreamRewriter {
   public:
     static const std::string DEFAULT_PROGRAM_NAME;
-    static constexpr size_t PROGRAM_INIT_SIZE = 100;
-    static constexpr size_t MIN_TOKEN_INDEX = 0;
+    static constexpr std::size_t PROGRAM_INIT_SIZE = 100;
+    static constexpr std::size_t MIN_TOKEN_INDEX = 0;
 
     TokenStreamRewriter(TokenStream *tokens);
     virtual ~TokenStreamRewriter();
@@ -101,7 +101,7 @@ namespace antlr4 {
     /// Rollback the instruction stream for a program so that
     /// the indicated instruction (via instructionIndex) is no
     /// longer in the stream.  UNTESTED!
-    virtual void rollback(const std::string &programName, size_t instructionIndex);
+    virtual void rollback(const std::string &programName, std::size_t instructionIndex);
 
     virtual void deleteProgram();
 
@@ -110,28 +110,28 @@ namespace antlr4 {
     virtual void insertAfter(Token *t, const std::string& text);
     virtual void insertAfter(size_t index, const std::string& text);
     virtual void insertAfter(const std::string &programName, Token *t, const std::string& text);
-    virtual void insertAfter(const std::string &programName, size_t index, const std::string& text);
+    virtual void insertAfter(const std::string &programName, std::size_t index, const std::string& text);
 
     virtual void insertBefore(Token *t, const std::string& text);
     virtual void insertBefore(size_t index, const std::string& text);
     virtual void insertBefore(const std::string &programName, Token *t, const std::string& text);
-    virtual void insertBefore(const std::string &programName, size_t index, const std::string& text);
+    virtual void insertBefore(const std::string &programName, std::size_t index, const std::string& text);
 
     virtual void replace(size_t index, const std::string& text);
-    virtual void replace(size_t from, size_t to, const std::string& text);
+    virtual void replace(size_t from, std::size_t to, const std::string& text);
     virtual void replace(Token *indexT, const std::string& text);
     virtual void replace(Token *from, Token *to, const std::string& text);
-    virtual void replace(const std::string &programName, size_t from, size_t to, const std::string& text);
+    virtual void replace(const std::string &programName, std::size_t from, std::size_t to, const std::string& text);
     virtual void replace(const std::string &programName, Token *from, Token *to, const std::string& text);
 
     virtual void Delete(size_t index);
-    virtual void Delete(size_t from, size_t to);
+    virtual void Delete(size_t from, std::size_t to);
     virtual void Delete(Token *indexT);
     virtual void Delete(Token *from, Token *to);
-    virtual void Delete(const std::string &programName, size_t from, size_t to);
+    virtual void Delete(const std::string &programName, std::size_t from, std::size_t to);
     virtual void Delete(const std::string &programName, Token *from, Token *to);
 
-    virtual size_t getLastRewriteTokenIndex();
+    virtual std::size_t getLastRewriteTokenIndex();
 
     /// Return the text from the original tokens altered per the
     /// instructions given to this rewriter.
@@ -158,20 +158,20 @@ namespace antlr4 {
     class RewriteOperation {
     public:
       /// What index into rewrites List are we?
-      size_t index;
+      std::size_t index;
       std::string text;
 
       /// Token buffer index.
-      size_t instructionIndex;
+      std::size_t instructionIndex;
 
-      RewriteOperation(TokenStreamRewriter *outerInstance, size_t index);
-      RewriteOperation(TokenStreamRewriter *outerInstance, size_t index, const std::string& text);
+      RewriteOperation(TokenStreamRewriter *outerInstance, std::size_t index);
+      RewriteOperation(TokenStreamRewriter *outerInstance, std::size_t index, const std::string& text);
       virtual ~RewriteOperation();
 
       /// Execute the rewrite operation by possibly adding to the buffer.
       /// Return the index of the next token to operate on.
 
-      virtual size_t execute(std::string *buf);
+      virtual std::size_t execute(std::string *buf);
       virtual std::string toString();
 
     private:
@@ -184,9 +184,9 @@ namespace antlr4 {
       TokenStreamRewriter *const outerInstance;
 
     public:
-      InsertBeforeOp(TokenStreamRewriter *outerInstance, size_t index, const std::string& text);
+      InsertBeforeOp(TokenStreamRewriter *outerInstance, std::size_t index, const std::string& text);
 
-      virtual size_t execute(std::string *buf) override;
+      virtual std::size_t execute(std::string *buf) override;
     };
 
     class ReplaceOp : public RewriteOperation {
@@ -194,10 +194,10 @@ namespace antlr4 {
       TokenStreamRewriter *const outerInstance;
 
     public:
-      size_t lastIndex;
+      std::size_t lastIndex;
 
-      ReplaceOp(TokenStreamRewriter *outerInstance, size_t from, size_t to, const std::string& text);
-      virtual size_t execute(std::string *buf) override;
+      ReplaceOp(TokenStreamRewriter *outerInstance, std::size_t from, std::size_t to, const std::string& text);
+      virtual std::size_t execute(std::string *buf) override;
       virtual std::string toString() override;
 
     private:
@@ -214,9 +214,9 @@ namespace antlr4 {
 
     /// <summary>
     /// Map String (program name) -> Integer index </summary>
-    std::map<std::string, size_t> _lastRewriteTokenIndexes;
-    virtual size_t getLastRewriteTokenIndex(const std::string &programName);
-    virtual void setLastRewriteTokenIndex(const std::string &programName, size_t i);
+    std::map<std::string, std::size_t> _lastRewriteTokenIndexes;
+    virtual std::size_t getLastRewriteTokenIndex(const std::string &programName);
+    virtual void setLastRewriteTokenIndex(const std::string &programName, std::size_t i);
     virtual std::vector<RewriteOperation*>& getProgram(const std::string &name);
 
     /// <summary>
@@ -275,7 +275,7 @@ namespace antlr4 {
 
     /// Get all operations before an index of a particular kind.
     template <typename T>
-    std::vector<T *> getKindOfOps(std::vector<RewriteOperation *> rewrites, size_t before) {
+    std::vector<T *> getKindOfOps(std::vector<RewriteOperation *> rewrites, std::size_t before) {
       std::vector<T *> ops;
       for (size_t i = 0; i < before && i < rewrites.size(); i++) {
         T *op = dynamic_cast<T *>(rewrites[i]);

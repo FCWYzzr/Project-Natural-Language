@@ -62,7 +62,7 @@ namespace atn {
     using PredictionContextPair = std::pair<const PredictionContext*, const PredictionContext*>;
 
     struct ANTLR4CPP_PUBLIC PredictionContextHasher final {
-      size_t operator()(const PredictionContextPair &value) const;
+      std::size_t operator()(const PredictionContextPair &value) const;
     };
 
     struct ANTLR4CPP_PUBLIC PredictionContextComparer final {
@@ -94,7 +94,7 @@ namespace atn {
     mutable Entry *_head = nullptr;
     mutable Entry *_tail = nullptr;
 
-    size_t _size = 0;
+    std::size_t _size = 0;
   };
 
 }  // namespace atn

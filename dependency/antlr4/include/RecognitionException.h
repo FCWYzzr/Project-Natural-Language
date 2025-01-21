@@ -26,7 +26,7 @@ namespace antlr4 {
     /// instance itself.
     Token *_offendingToken;
 
-    size_t _offendingState;
+    std::size_t _offendingState;
 
   public:
     RecognitionException(Recognizer *recognizer, IntStream *input, ParserRuleContext *ctx,
@@ -44,7 +44,7 @@ namespace antlr4 {
     /// edge we couldn't match.
     ///
     /// If the state number is not known, this method returns -1.
-    virtual size_t getOffendingState() const;
+    virtual std::size_t getOffendingState() const;
 
   protected:
     void setOffendingState(size_t offendingState);

@@ -20,12 +20,12 @@ namespace antlr4 {
   ///  will really every use this.
   class ANTLR4CPP_PUBLIC RuleContextWithAltNum : public ParserRuleContext {
   public:
-    size_t altNum = 0;
+    std::size_t altNum = 0;
 
     RuleContextWithAltNum();
     RuleContextWithAltNum(ParserRuleContext *parent, int invokingStateNumber);
 
-    virtual size_t getAltNumber() const override;
+    virtual std::size_t getAltNumber() const override;
     virtual void setAltNumber(size_t altNum) override;
   };
 

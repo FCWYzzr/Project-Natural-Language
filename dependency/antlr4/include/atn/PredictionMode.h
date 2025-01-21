@@ -340,7 +340,7 @@ namespace atn {
      * we need exact ambiguity detection when the sets look like
      * {@code A={{1,2}}} or {@code {{1,2},{1,2}}}, etc...</p>
      */
-    static size_t resolvesToJustOneViableAlt(const std::vector<antlrcpp::BitSet> &altsets);
+    static std::size_t resolvesToJustOneViableAlt(const std::vector<antlrcpp::BitSet> &altsets);
 
     /// <summary>
     /// Determines if every alternative subset in {@code altsets} contains more
@@ -389,7 +389,7 @@ namespace atn {
     /// <seealso cref="ATN#INVALID_ALT_NUMBER"/>.
     /// </summary>
     /// <param name="altsets"> a collection of alternative subsets </param>
-    static size_t getUniqueAlt(const std::vector<antlrcpp::BitSet> &altsets);
+    static std::size_t getUniqueAlt(const std::vector<antlrcpp::BitSet> &altsets);
 
     /// <summary>
     /// Gets the complete set of represented alternatives for a collection of
@@ -429,7 +429,7 @@ namespace atn {
 
     static bool hasStateAssociatedWithOneAlt(ATNConfigSet *configs);
 
-    static size_t getSingleViableAlt(const std::vector<antlrcpp::BitSet> &altsets);
+    static std::size_t getSingleViableAlt(const std::vector<antlrcpp::BitSet> &altsets);
   };
 
 } // namespace atn

@@ -12,7 +12,7 @@
 namespace antlr4 {
 namespace atn {
 
-  enum class SemanticContextType : size_t {
+  enum class SemanticContextType : std::size_t {
     PREDICATE = 1,
     PRECEDENCE = 2,
     AND = 3,

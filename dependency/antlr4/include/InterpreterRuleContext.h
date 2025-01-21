@@ -33,13 +33,13 @@ namespace antlr4 {
      * @param invokingStateNumber The invoking state number.
      * @param ruleIndex The rule index for the current context.
      */
-    InterpreterRuleContext(ParserRuleContext *parent, size_t invokingStateNumber, size_t ruleIndex);
+    InterpreterRuleContext(ParserRuleContext *parent, std::size_t invokingStateNumber, std::size_t ruleIndex);
 
-    virtual size_t getRuleIndex() const override;
+    virtual std::size_t getRuleIndex() const override;
 
   protected:
     /** This is the backing field for {@link #getRuleIndex}. */
-    const size_t _ruleIndex = INVALID_INDEX;
+    const std::size_t _ruleIndex = INVALID_INDEX;
 };
 
 } // namespace antlr4

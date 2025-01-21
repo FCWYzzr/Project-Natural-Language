@@ -13,12 +13,12 @@ namespace xpath {
 
   class ANTLR4CPP_PUBLIC XPathRuleElement : public XPathElement {
   public:
-    XPathRuleElement(const std::string &ruleName, size_t ruleIndex);
+    XPathRuleElement(const std::string &ruleName, std::size_t ruleIndex);
 
     virtual std::vector<ParseTree *> evaluate(ParseTree *t) override;
 
   protected:
-    size_t _ruleIndex = 0;
+    std::size_t _ruleIndex = 0;
   };
 
 } // namespace xpath

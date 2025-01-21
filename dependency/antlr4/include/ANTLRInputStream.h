@@ -21,7 +21,7 @@ namespace antlr4 {
     std::u32string _data;
 
     /// 0..n-1 index into string of next char </summary>
-    size_t p;
+    std::size_t p;
 
   public:
     /// What is name or source of this char stream?
@@ -31,15 +31,15 @@ namespace antlr4 {
 
     ANTLRInputStream(std::string_view input);
 
-    ANTLRInputStream(const char *data, size_t length);
+    ANTLRInputStream(const char *data, std::size_t length);
     ANTLRInputStream(std::istream &stream);
 
     virtual void load(const std::string &input, bool lenient);
-    virtual void load(const char *data, size_t length, bool lenient);
+    virtual void load(const char *data, std::size_t length, bool lenient);
     virtual void load(std::istream &stream, bool lenient);
 
     virtual void load(const std::string &input) { load(input, false); }
-    virtual void load(const char *data, size_t length) { load(data, length, false); }
+    virtual void load(const char *data, std::size_t length) { load(data, length, false); }
     virtual void load(std::istream &stream) { load(stream, false); }
 
     /// Reset the stream so that it's in the same state it was
@@ -47,16 +47,16 @@ namespace antlr4 {
     /// touched.
     virtual void reset();
     virtual void consume() override;
-    virtual size_t LA(ssize_t i) override;
-    virtual size_t LT(ssize_t i);
+    virtual std::size_t LA(ssize_t i) override;
+    virtual std::size_t LT(ssize_t i);
 
     /// <summary>
     /// Return the current input symbol index 0..n where n indicates the
     ///  last symbol has been read.  The index is the index of char to
     ///  be returned from LA(1).
     /// </summary>
-    virtual size_t index() override;
-    virtual size_t size() override;
+    virtual std::size_t index() override;
+    virtual std::size_t size() override;
 
     /// <summary>
     /// mark/release do nothing; we have entire buffer </summary>

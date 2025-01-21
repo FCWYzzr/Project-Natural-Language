@@ -14,7 +14,7 @@ namespace antlr4 {
 
   class ANTLR4CPP_PUBLIC Recognizer {
   public:
-    static constexpr size_t EOF = std::numeric_limits<size_t>::max();
+    static constexpr std::size_t EOF = std::numeric_limits<size_t>::max();
 
     Recognizer();
     Recognizer(Recognizer const&) = delete;
@@ -37,16 +37,16 @@ namespace antlr4 {
     /// <p/>
     /// Used for XPath and tree pattern compilation.
     /// </summary>
-    virtual std::map<std::string_view, size_t> getTokenTypeMap();
+    virtual std::map<std::string_view, std::size_t> getTokenTypeMap();
 
     /// <summary>
     /// Get a map from rule names to rule indexes.
     /// <p/>
     /// Used for XPath and tree pattern compilation.
     /// </summary>
-    virtual std::map<std::string, size_t> getRuleIndexMap();
+    virtual std::map<std::string, std::size_t> getRuleIndexMap();
 
-    virtual size_t getTokenType(std::string_view tokenName);
+    virtual std::size_t getTokenType(std::string_view tokenName);
 
     /// <summary>
     /// If this recognizer was generated, it will have a serialized ATN
@@ -109,13 +109,13 @@ namespace antlr4 {
 
     // subclass needs to override these if there are sempreds or actions
     // that the ATN interp needs to execute
-    virtual bool sempred(RuleContext *localctx, size_t ruleIndex, size_t actionIndex);
+    virtual bool sempred(RuleContext *localctx, std::size_t ruleIndex, std::size_t actionIndex);
 
     virtual bool precpred(RuleContext *localctx, int precedence);
 
-    virtual void action(RuleContext *localctx, size_t ruleIndex, size_t actionIndex);
+    virtual void action(RuleContext *localctx, std::size_t ruleIndex, std::size_t actionIndex);
 
-    size_t getState() const { return _stateNumber; }
+    std::size_t getState() const { return _stateNumber; }
 
     // Get the ATN used by the recognizer for prediction.
     virtual const atn::ATN& getATN() const = 0;
@@ -146,12 +146,12 @@ namespace antlr4 {
     internal::Mutex _mutex;
 
   private:
-    static std::map<const dfa::Vocabulary*, std::map<std::string_view, size_t>> _tokenTypeMapCache;
-    static std::map<std::vector<std::string>, std::map<std::string, size_t>> _ruleIndexMapCache;
+    static std::map<const dfa::Vocabulary*, std::map<std::string_view, std::size_t>> _tokenTypeMapCache;
+    static std::map<std::vector<std::string>, std::map<std::string, std::size_t>> _ruleIndexMapCache;
 
     ProxyErrorListener _proxListener; // Manages a collection of listeners.
 
-    size_t _stateNumber;
+    std::size_t _stateNumber;
 
     void InitializeInstanceFields();
 

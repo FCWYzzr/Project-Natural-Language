@@ -12,7 +12,7 @@
 namespace antlr4 {
 namespace tree {
 
-  enum class ParseTreeType : size_t {
+  enum class ParseTreeType : std::size_t {
     TERMINAL = 1,
     ERROR = 2,
     RULE = 3,

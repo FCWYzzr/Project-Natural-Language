@@ -18,14 +18,14 @@ namespace antlr4 {
   /// of speed.
   class ANTLR4CPP_PUBLIC Lexer : public Recognizer, public TokenSource {
   public:
-    static constexpr size_t DEFAULT_MODE = 0;
-    static constexpr size_t MORE = std::numeric_limits<size_t>::max() - 1;
-    static constexpr size_t SKIP = std::numeric_limits<size_t>::max() - 2;
+    static constexpr std::size_t DEFAULT_MODE = 0;
+    static constexpr std::size_t MORE = std::numeric_limits<size_t>::max() - 1;
+    static constexpr std::size_t SKIP = std::numeric_limits<size_t>::max() - 2;
 
-    static constexpr size_t DEFAULT_TOKEN_CHANNEL = Token::DEFAULT_CHANNEL;
-    static constexpr size_t HIDDEN = Token::HIDDEN_CHANNEL;
-    static constexpr size_t MIN_CHAR_VALUE = 0;
-    static constexpr size_t MAX_CHAR_VALUE = 0x10FFFF;
+    static constexpr std::size_t DEFAULT_TOKEN_CHANNEL = Token::DEFAULT_CHANNEL;
+    static constexpr std::size_t HIDDEN = Token::HIDDEN_CHANNEL;
+    static constexpr std::size_t MIN_CHAR_VALUE = 0;
+    static constexpr std::size_t MAX_CHAR_VALUE = 0x10FFFF;
 
     CharStream *_input; // Pure reference, usually from statically allocated instance.
 
@@ -52,28 +52,28 @@ namespace antlr4 {
     ///  Needed, for example, to get the text for current token.  Set at
     ///  the start of nextToken.
     /// </summary>
-    size_t tokenStartCharIndex;
+    std::size_t tokenStartCharIndex;
 
     /// <summary>
     /// The line on which the first character of the token resides </summary>
-    size_t tokenStartLine;
+    std::size_t tokenStartLine;
 
     /// The character position of first character within the line.
-    size_t tokenStartCharPositionInLine;
+    std::size_t tokenStartCharPositionInLine;
 
     /// Once we see EOF on char stream, next token will be EOF.
     /// If you have DONE : EOF ; then you see DONE EOF.
     bool hitEOF;
 
     /// The channel number for the current token.
-    size_t channel;
+    std::size_t channel;
 
     /// The token type for the current token.
-    size_t type;
+    std::size_t type;
 
     // Use the vector as a stack.
     std::vector<size_t> modeStack;
-    size_t mode;
+    std::size_t mode;
 
     Lexer();
     Lexer(CharStream *input);
@@ -93,7 +93,7 @@ namespace antlr4 {
     virtual void more();
     virtual void setMode(size_t m);
     virtual void pushMode(size_t m);
-    virtual size_t popMode();
+    virtual std::size_t popMode();
 
     template<typename T1>
     void setTokenFactory(TokenFactory<T1> *factory)  {
@@ -124,16 +124,16 @@ namespace antlr4 {
 
     virtual Token* emitEOF();
 
-    virtual size_t getLine() const override;
+    virtual std::size_t getLine() const override;
 
-    virtual size_t getCharPositionInLine() override;
+    virtual std::size_t getCharPositionInLine() override;
 
     virtual void setLine(size_t line);
 
     virtual void setCharPositionInLine(size_t charPositionInLine);
 
     /// What is the index of the current character of lookahead?
-    virtual size_t getCharIndex();
+    virtual std::size_t getCharIndex();
 
     /// Return the text matched so far for the current token or any
     /// text override.
@@ -150,11 +150,11 @@ namespace antlr4 {
 
     virtual void setType(size_t ttype);
 
-    virtual size_t getType();
+    virtual std::size_t getType();
 
     virtual void setChannel(size_t newChannel);
 
-    virtual size_t getChannel();
+    virtual std::size_t getChannel();
 
     virtual const std::vector<std::string>& getChannelNames() const = 0;
 
@@ -181,7 +181,7 @@ namespace antlr4 {
     /// incremented each time <seealso cref="#notifyErrorListeners"/> is called.
     /// </summary>
     /// <seealso cref= #notifyListeners </seealso>
-    virtual size_t getNumberOfSyntaxErrors();
+    virtual std::size_t getNumberOfSyntaxErrors();
 
   protected:
     /// You can set the text for the current token to override what is in
@@ -189,7 +189,7 @@ namespace antlr4 {
     std::string _text;
 
   private:
-    size_t _syntaxErrors;
+    std::size_t _syntaxErrors;
     void InitializeInstanceFields();
   };
 

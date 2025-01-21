@@ -15,7 +15,7 @@ namespace atn {
 
   class ANTLR4CPP_PUBLIC ATNDeserializer final {
   public:
-    static constexpr size_t SERIALIZED_VERSION = 4;
+    static constexpr std::size_t SERIALIZED_VERSION = 4;
 
     ATNDeserializer();
 

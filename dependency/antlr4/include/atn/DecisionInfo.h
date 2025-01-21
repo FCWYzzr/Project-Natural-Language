@@ -33,7 +33,7 @@ namespace atn {
     /// <summary>
     /// The decision number, which is an index into <seealso cref="ATN#decisionToState"/>.
     /// </summary>
-    const size_t decision;
+    const std::size_t decision;
 
     /// <summary>
     /// The total number of times <seealso cref="ParserATNSimulator#adaptivePredict"/> was

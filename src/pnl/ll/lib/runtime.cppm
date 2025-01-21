@@ -4,28 +4,17 @@
 /**
  * communicate platform & vm
  */
+module;
+#include "project-nl.h"
+
 export module pnl.ll.runtime;
-export import pnl.ll.base;
-export import pnl.ll.comtime;
-export import pnl.ll.string;
-export import pnl.ll.meta_prog;
-export import pnl.ll.collections;
+import pnl.ll.base;
+import pnl.ll.comtime;
+import pnl.ll.string;
+import pnl.ll.collections;
 
 
-import <dlfcn.h>;
-import <filesystem>;
-import <stdexcept>;
-import <utility>;
-import <algorithm>;
-import <ranges>;
-import <unordered_map>;
-import <iostream>;
-import <variant>;
-import <thread>;
-import <semaphore>;
-import <shared_mutex>;
-import <mutex>;
-import <memory_resource>;
+
 
 using namespace pnl::ll;
 
@@ -68,49 +57,36 @@ export namespace pnl::ll::inline runtime{
 
         VirtualAddress(const VirtualAddress &other) noexcept = default;
 
-        VirtualAddress & operator=(const VirtualAddress &other) noexcept {
-            if (this == &other)
-                return *this;
-            content = other.content;
-            return *this;
-        }
+        VirtualAddress & operator=(const VirtualAddress &) noexcept = default;
 
         [[nodiscard]]
-        std::uint8_t page() const noexcept {
-            return (content  >> 48) % 0xf;
-        }
-        [[nodiscard]]
-        std::uint32_t id() const noexcept {
-            return (content >> 16) & 0xffffffff;
-        }
-        [[nodiscard]]
-        std::uint16_t offset() const noexcept {
-            return content & 0xffff;
-        }
+        std::uint8_t page() const noexcept;
 
         [[nodiscard]]
-        VirtualAddress id_shift(const std::uint32_t shift) const noexcept {
-            return {page(), id() + shift, offset()};
-        }
+        std::uint32_t id() const noexcept;
 
         [[nodiscard]]
-        VirtualAddress offset_shift(const std::uint16_t shift) const noexcept {
-            return {page(), id(), static_cast<std::uint16_t>(offset() + shift)};
-        }
+        std::uint16_t offset() const noexcept;
 
         [[nodiscard]]
-        bool is_reserved() const noexcept {
-            return page() == invalid_page_id;
-        }
+        VirtualAddress id_shift(std::uint32_t shift) const noexcept;
+
         [[nodiscard]]
-        bool is_process() const noexcept {
-            return page() == process_page_id;
-        }
+        VirtualAddress offset_shift(std::uint16_t shift) const noexcept;
+
+        [[nodiscard]]
+        bool is_native() const noexcept;
+
+        [[nodiscard]]
+        bool is_reserved() const noexcept;
+
+        [[nodiscard]]
+        bool is_process() const noexcept;
+
+
         [[nodiscard]]
         std::strong_ordering
-        operator <=> (const VirtualAddress other) const noexcept {
-            return content <=> other.content;
-        }
+        operator <=> (VirtualAddress other) const noexcept;
 
         static VirtualAddress from_reserve_offset(std::uint32_t offset) noexcept {
             return {invalid_page_id, offset};
@@ -152,7 +128,7 @@ export namespace pnl::ll::inline runtime{
         }
 
         [[nodiscard]]
-        NtvFunc find_proc(const NStr& name) const noexcept {
+        NtvFunc find_proc(const MBStr& name) const noexcept {
             return static_cast<NtvFunc>(dlsym(lib_ref, name.data()));
         }
 
@@ -275,6 +251,7 @@ export namespace pnl::ll::runtime::execute {
         }
 
         ListV<T> view(Process& proc) noexcept;
+        ListV<const T> view(Process& proc) const noexcept;
     };
 
 
@@ -494,14 +471,14 @@ export namespace pnl::ll::runtime::load {
 export namespace pnl::ll::runtime {
 
     struct PNL_LIB_PREFIX FuncContext {
-        const USize
+        const std::uint32_t
             milestone;
+        std::uint32_t
+            program_counter{0};
         const VirtualAddress
             base_addr;
         const VirtualAddress
             instructions;
-        USize
-            program_counter{0};
         Process& process;
 
         FuncContext(const USize milestone, const VirtualAddress &base_addr, const VirtualAddress &instructions,
@@ -520,14 +497,14 @@ export namespace pnl::ll::runtime {
 
 
     struct PNL_LIB_PREFIX Thread {
-        mutable std::binary_semaphore
-                step_token;
         std::pmr::unsynchronized_pool_resource
                 thread_memory;
+        mutable std::binary_semaphore
+                step_token;
 
         Process* const
                 process;
-        const std::uint16_t
+        const std::uint8_t
                 thread_id;
         bool
                 is_daemon{false};
@@ -542,7 +519,7 @@ export namespace pnl::ll::runtime {
         std::jthread
                 native_handler;
 
-        Thread(Process* process, std::uint16_t) noexcept;
+        Thread(Process* process, std::uint8_t) noexcept;
 
         Thread(Thread &&other) noexcept;
 
@@ -563,21 +540,18 @@ export namespace pnl::ll::runtime {
 
         void clear() noexcept;
 
-
         [[nodiscard]]
         FuncContext& current_proc() noexcept;
 
         [[nodiscard]]
-        VirtualAddress mem_spec_base() noexcept;
-
+        VirtualAddress process_memory_base() noexcept;
         [[nodiscard]]
-        Class& vm__top_obj_type() noexcept;
+        VirtualAddress function_memory_base() noexcept;
 
-
-        Value vm__pop_top() noexcept {
-            auto top = std::move(eval_stack.top());
+        Value take() noexcept {
+            auto top = eval_stack.top();
             eval_stack.pop();
-            return std::move(top);
+            return top;
         }
 
         template<typename T=UByte>
@@ -585,89 +559,10 @@ export namespace pnl::ll::runtime {
         T& deref(const VirtualAddress& vr) noexcept;
 
 
-
         void run(const std::stop_token &) noexcept;
-
 
         void step() noexcept;
 
-
-        static void nop() noexcept {}
-
-
-        void waste() noexcept;
-
-
-        void cast(Instruction inst) noexcept;
-
-
-        void cmp() noexcept;
-
-
-        void invoke_top() noexcept;
-
-
-        void end_proc() noexcept;
-
-
-
-        void jump(Instruction inst) noexcept;
-
-
-        void add() noexcept;
-
-        void sub() noexcept;
-
-        void mul() noexcept;
-
-        void div() noexcept;
-
-        void rem() noexcept;
-
-
-        void neg() noexcept;
-
-        void shl() noexcept;
-
-        void shr() noexcept;
-
-        void ushr() noexcept;
-
-
-        void bit_and() noexcept;
-
-        void bit_or() noexcept;
-
-        void bit_xor() noexcept;
-
-        void bit_inv() noexcept;
-
-
-
-        void load(Instruction) noexcept;
-
-        void store(Instruction) noexcept;
-        void ref_at(Instruction) noexcept;
-
-        void load_by_ref(Instruction) noexcept;
-
-        void store_by_ref(Instruction) noexcept;
-
-        void ref_member(Instruction) noexcept;
-
-        void ref_static_member(Instruction) noexcept;
-
-        void ref_method(Instruction) noexcept;
-
-        void ref_static_method(Instruction) noexcept;
-
-
-        void invoke_override(Instruction) noexcept;
-
-
-        void instate(Instruction) noexcept;
-
-        void destroy() noexcept;
     };
 
     struct PNL_LIB_PREFIX Process {
@@ -683,19 +578,20 @@ export namespace pnl::ll::runtime {
         List<Thread>        threads{&process_memory};
 
         std::shared_mutex   native_page_mutex;
-        List<std::tuple<
+        List<std::pair<
             UByte*,
-            std::function<void(const UByte*)>,
-            USize>>         native_page{&process_memory};
+            USize
+        >>                  native_page{&process_memory};
 
         // name mapping for dynamic linking
         Dict<VirtualAddress>
                             named_exports{&process_memory};
 
-        explicit Process(MManager*, Datapack, const Path& ="./");
-        ~Process() noexcept {
+        explicit Process(MManager*, Datapack, const Path&);
+        ~Process() noexcept { // NOLINT(*-use-equals-default)
             for (auto& thr: threads)
                 thr.terminate();
+            libraries.clear();
         }
 
         void pause() const noexcept;
@@ -710,6 +606,10 @@ export namespace pnl::ll::runtime {
         Thread& get_available_thread() noexcept;
 
         Thread& main_thread() noexcept;
+
+        [[nodiscard]]
+        VirtualAddress wild_alloc(Int) noexcept;
+        void wild_collect(VirtualAddress) noexcept;
 
         template<typename T>
         T& deref(const VirtualAddress vr) noexcept {
@@ -740,4 +640,12 @@ ListV<T> Array<T>::view(Process &proc) noexcept {
     const auto beg = &(*this)[0];
     const auto end = &(*this)[arr_t.length];
     return ListV<T>(beg, end);
+}
+
+template<typename T>
+ListV<const T> Array<T>::view(Process &proc) const noexcept {
+    const auto& arr_t = proc.deref<ArrayType>(type);
+    const auto beg = &(*this)[0];
+    const auto end = &(*this)[arr_t.length];
+    return ListV<const T>(beg, end);
 }

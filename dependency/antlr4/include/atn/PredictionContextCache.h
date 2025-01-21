@@ -47,7 +47,7 @@ namespace atn {
 
   private:
     struct ANTLR4CPP_PUBLIC PredictionContextHasher final {
-      size_t operator()(const Ref<const PredictionContext> &predictionContext) const;
+      std::size_t operator()(const Ref<const PredictionContext> &predictionContext) const;
     };
 
     struct ANTLR4CPP_PUBLIC PredictionContextComparer final {

@@ -36,7 +36,7 @@ namespace atn {
     // ml: originally Integer.MAX_VALUE, which would be -1 for us, but this is already used in places where
     //     -1 is converted to unsigned, so we use a different value here. Any value does the job provided it doesn't
     //     conflict with real return states.
-    static constexpr size_t EMPTY_RETURN_STATE = std::numeric_limits<size_t>::max() - 9;
+    static constexpr std::size_t EMPTY_RETURN_STATE = std::numeric_limits<size_t>::max() - 9;
 
     // dispatch
     static Ref<const PredictionContext> merge(Ref<const PredictionContext> a,
@@ -169,15 +169,15 @@ namespace atn {
 
     PredictionContextType getContextType() const { return _contextType; }
 
-    virtual size_t size() const = 0;
+    virtual std::size_t size() const = 0;
     virtual const Ref<const PredictionContext>& getParent(size_t index) const = 0;
-    virtual size_t getReturnState(size_t index) const = 0;
+    virtual std::size_t getReturnState(size_t index) const = 0;
 
     /// This means only the EMPTY (wildcard? not sure) context is in set.
     virtual bool isEmpty() const = 0;
     bool hasEmptyPath() const;
 
-    size_t hashCode() const;
+    std::size_t hashCode() const;
 
     virtual bool equals(const PredictionContext &other) const = 0;
 
@@ -193,9 +193,9 @@ namespace atn {
 
     PredictionContext(PredictionContext&& other);
 
-    virtual size_t hashCodeImpl() const = 0;
+    virtual std::size_t hashCodeImpl() const = 0;
 
-    size_t cachedHashCode() const { return _hashCode.load(std::memory_order_relaxed); }
+    std::size_t cachedHashCode() const { return _hashCode.load(std::memory_order_relaxed); }
 
   private:
     const PredictionContextType _contextType;
@@ -217,7 +217,7 @@ namespace std {
 
   template <>
   struct hash<::antlr4::atn::PredictionContext> {
-    size_t operator()(const ::antlr4::atn::PredictionContext &predictionContext) const {
+    std::size_t operator()(const ::antlr4::atn::PredictionContext &predictionContext) const {
       return predictionContext.hashCode();
     }
   };

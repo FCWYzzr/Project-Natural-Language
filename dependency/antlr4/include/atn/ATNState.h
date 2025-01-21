@@ -83,11 +83,11 @@ namespace atn {
 
   class ANTLR4CPP_PUBLIC ATNState {
   public:
-    static constexpr size_t INITIAL_NUM_TRANSITIONS = 4;
-    static constexpr size_t INVALID_STATE_NUMBER = std::numeric_limits<size_t>::max();
+    static constexpr std::size_t INITIAL_NUM_TRANSITIONS = 4;
+    static constexpr std::size_t INVALID_STATE_NUMBER = std::numeric_limits<size_t>::max();
 
-    size_t stateNumber = INVALID_STATE_NUMBER;
-    size_t ruleIndex = 0; // at runtime, we don't have Rule objects
+    std::size_t stateNumber = INVALID_STATE_NUMBER;
+    std::size_t ruleIndex = 0; // at runtime, we don't have Rule objects
     bool epsilonOnlyTransitions = false;
 
     /// Track the transitions emanating from this ATN state.
@@ -109,7 +109,7 @@ namespace atn {
     void addTransition(size_t index, ConstTransitionPtr e);
     ConstTransitionPtr removeTransition(size_t index);
 
-    virtual size_t hashCode() const;
+    virtual std::size_t hashCode() const;
     virtual bool equals(const ATNState &other) const;
 
     virtual bool isNonGreedyExitState() const;

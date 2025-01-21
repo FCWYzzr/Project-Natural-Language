@@ -66,7 +66,7 @@ namespace antlr4 {
     std::exception_ptr exception;
 
     ParserRuleContext();
-    ParserRuleContext(ParserRuleContext *parent, size_t invokingStateNumber);
+    ParserRuleContext(ParserRuleContext *parent, std::size_t invokingStateNumber);
 
     /** COPY a ctx (I'm deliberately not using copy constructor) to avoid
      *  confusion with creating node with parent. Does not copy children
@@ -96,7 +96,7 @@ namespace antlr4 {
     template<typename T>
     T* getRuleContext(size_t i) const {
       static_assert(std::is_base_of_v<RuleContext, T>, "T must be derived from RuleContext");
-      size_t j = 0; // what element have we found with ctxType?
+      std::size_t j = 0; // what element have we found with ctxType?
       for (auto *child : children) {
         if (RuleContext::is(child)) {
           if (auto *typedChild = dynamic_cast<T*>(child); typedChild != nullptr) {

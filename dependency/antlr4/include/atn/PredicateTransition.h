@@ -22,13 +22,13 @@ namespace atn {
 
     static bool is(const Transition *transition) { return transition != nullptr && is(*transition); }
 
-    PredicateTransition(ATNState *target, size_t ruleIndex, size_t predIndex, bool isCtxDependent);
+    PredicateTransition(ATNState *target, std::size_t ruleIndex, std::size_t predIndex, bool isCtxDependent);
 
-    size_t getRuleIndex() const {
+    std::size_t getRuleIndex() const {
       return _predicate->ruleIndex;
     }
 
-    size_t getPredIndex() const {
+    std::size_t getPredIndex() const {
       return _predicate->predIndex;
     }
 
@@ -37,7 +37,7 @@ namespace atn {
     }
 
     bool isEpsilon() const override;
-    bool matches(size_t symbol, size_t minVocabSymbol, size_t maxVocabSymbol) const override;
+    bool matches(size_t symbol, std::size_t minVocabSymbol, std::size_t maxVocabSymbol) const override;
     std::string toString() const override;
 
     const Ref<const SemanticContext::Predicate>& getPredicate() const { return _predicate; }

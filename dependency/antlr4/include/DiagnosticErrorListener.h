@@ -52,14 +52,14 @@ namespace antlr4 {
     /// {@code false} to report all ambiguities. </param>
     DiagnosticErrorListener(bool exactOnly);
 
-    virtual void reportAmbiguity(Parser *recognizer, const dfa::DFA &dfa, size_t startIndex, size_t stopIndex, bool exact,
+    virtual void reportAmbiguity(Parser *recognizer, const dfa::DFA &dfa, std::size_t startIndex, std::size_t stopIndex, bool exact,
       const antlrcpp::BitSet &ambigAlts, atn::ATNConfigSet *configs) override;
 
-    virtual void reportAttemptingFullContext(Parser *recognizer, const dfa::DFA &dfa, size_t startIndex, size_t stopIndex,
+    virtual void reportAttemptingFullContext(Parser *recognizer, const dfa::DFA &dfa, std::size_t startIndex, std::size_t stopIndex,
       const antlrcpp::BitSet &conflictingAlts, atn::ATNConfigSet *configs) override;
 
-    virtual void reportContextSensitivity(Parser *recognizer, const dfa::DFA &dfa, size_t startIndex, size_t stopIndex,
-      size_t prediction, atn::ATNConfigSet *configs) override;
+    virtual void reportContextSensitivity(Parser *recognizer, const dfa::DFA &dfa, std::size_t startIndex, std::size_t stopIndex,
+      std::size_t prediction, atn::ATNConfigSet *configs) override;
 
   protected:
     virtual std::string getDecisionDescription(Parser *recognizer, const dfa::DFA &dfa);

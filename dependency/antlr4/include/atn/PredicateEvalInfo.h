@@ -28,7 +28,7 @@ namespace atn {
     /// configurations may predict the same alternative which are guarded by
     /// other semantic contexts and/or <seealso cref="SemanticContext#NONE"/>.
     /// </summary>
-    const size_t predictedAlt;
+    const std::size_t predictedAlt;
 
     /// The result of evaluating the semantic context <seealso cref="#semctx"/>.
     const bool evalResult;
@@ -54,8 +54,8 @@ namespace atn {
     /// </param>
     /// <seealso cref= ParserATNSimulator#evalSemanticContext(SemanticContext, ParserRuleContext, int, boolean) </seealso>
     /// <seealso cref= SemanticContext#eval(Recognizer, RuleContext) </seealso>
-    PredicateEvalInfo(size_t decision, TokenStream *input, size_t startIndex, size_t stopIndex,
-                      Ref<const SemanticContext> semctx, bool evalResult, size_t predictedAlt, bool fullCtx);
+    PredicateEvalInfo(size_t decision, TokenStream *input, std::size_t startIndex, std::size_t stopIndex,
+                      Ref<const SemanticContext> semctx, bool evalResult, std::size_t predictedAlt, bool fullCtx);
   };
 
 } // namespace atn

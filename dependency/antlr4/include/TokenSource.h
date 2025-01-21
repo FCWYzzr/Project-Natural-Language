@@ -40,7 +40,7 @@ namespace antlr4 {
     /// </summary>
     /// <returns> The line number for the current position in the input stream, or
     /// 0 if the current token source does not track line numbers. </returns>
-    virtual size_t getLine() const = 0;
+    virtual std::size_t getLine() const = 0;
 
     /// <summary>
     /// Get the index into the current line for the current position in the input
@@ -48,7 +48,7 @@ namespace antlr4 {
     /// </summary>
     /// <returns> The line number for the current position in the input stream, or
     /// (sze_t)-1 if the current token source does not track character positions. </returns>
-    virtual size_t getCharPositionInLine() = 0;
+    virtual std::size_t getCharPositionInLine() = 0;
 
     /// <summary>
     /// Get the <seealso cref="CharStream"/> from which this token source is currently

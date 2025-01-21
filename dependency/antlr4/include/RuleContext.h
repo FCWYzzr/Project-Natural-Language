@@ -68,10 +68,10 @@ namespace antlr4 {
     /// What state invoked the rule associated with this context?
     /// The "return address" is the followState of invokingState
     /// If parent is null, this should be -1 and this context object represents the start rule.
-    size_t invokingState;
+    std::size_t invokingState;
 
     RuleContext();
-    RuleContext(RuleContext *parent, size_t invokingState);
+    RuleContext(RuleContext *parent, std::size_t invokingState);
 
     virtual int depth();
 
@@ -84,7 +84,7 @@ namespace antlr4 {
 
     virtual std::string getText() override;
 
-    virtual size_t getRuleIndex() const;
+    virtual std::size_t getRuleIndex() const;
 
     /** For rule associated with this parse tree internal node, return
      *  the outer alternative number used to match the input. Default
@@ -95,7 +95,7 @@ namespace antlr4 {
      *
      *  @since 4.5.3
      */
-    virtual size_t getAltNumber() const;
+    virtual std::size_t getAltNumber() const;
 
     /** Set the outer alternative number for this context node. Default
      *  implementation does nothing to avoid backing field overhead for

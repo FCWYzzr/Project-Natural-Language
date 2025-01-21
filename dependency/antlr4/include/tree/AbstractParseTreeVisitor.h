@@ -34,7 +34,7 @@ namespace tree {
      */
     virtual std::any visitChildren(ParseTree *node) override {
       std::any result = defaultResult();
-      size_t n = node->children.size();
+      std::size_t n = node->children.size();
       for (size_t i = 0; i < n; i++) {
         if (!shouldVisitNextChild(node, result)) {
           break;

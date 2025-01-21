@@ -1,8 +1,10 @@
 //
 // Created by FCWY on 25-1-8.
 //
+module;
+#include "project-nl.h"
 module pnl.ll.comtime;
-import pnl.ll.meta_prog;
+import pnl.ll.base;
 import pnl.ll.string;
 
 using namespace pnl::ll;
@@ -38,232 +40,227 @@ Package Package::anonymous_builtin(MManager* const mem) noexcept {
 
     // rtt object class
     {
-        exports.emplace(data.size(), Str{L"RTUObject", mem});
-        data.emplace_back(TFlag<ClassRepr>, ClassRepr{{L"RTUObject", mem},
+        exports.emplace(data.size(), Str{VM_TEXT("RTUObject"), mem});
+        data.emplace_back(TFlag<ClassRepr>, ClassRepr{{VM_TEXT("RTUObject"), mem},
                 false,
                 {},
                 {{
-                    {L"::RTUObject::()", mem},
-                    {L"::RTUObject::~()", mem}
+                    {VM_TEXT("::RTUObject::()"), mem},
+                    {VM_TEXT("::RTUObject::~()"), mem}
                 }, {mem}}, {}, {}});
     }
 
     // rtt object class
     {
-        exports.emplace(data.size(), Str{L"RTTObject", mem});
-        data.emplace_back(TFlag<ClassRepr>, ClassRepr{{L"RTTObject", mem},
+        exports.emplace(data.size(), Str{VM_TEXT("RTTObject"), mem});
+        data.emplace_back(TFlag<ClassRepr>, ClassRepr{{VM_TEXT("RTTObject"), mem},
                 true,
                 List<Pair<Str, ObjRefRepr>>{{
-                    Pair{L"type", L"::address"}
+                    Pair{VM_TEXT("type"), VM_TEXT("::address")}
                 }, {mem}},
                 {{
-                    {L"::RTTObject::()", mem},
-                    {L"::RTTObject::~()", mem}
+                    {VM_TEXT("::RTTObject::()")},
+                    {VM_TEXT("::RTTObject::~()")}
                 }, {mem}}, {}, {}});
     }
 
     // class of all types: type class
     {
-        exports.emplace(data.size(), Str{L"Type", mem});
-        data.emplace_back(TFlag<ClassRepr>, ClassRepr{{L"Type", mem},
+        exports.emplace(data.size(), Str{VM_TEXT("Type"), mem});
+        data.emplace_back(TFlag<ClassRepr>, ClassRepr{{VM_TEXT("Type"), mem},
             true,
             List<Pair<Str, ObjRefRepr>>{{
-                Pair{L"__super", L"::RTTObject"},
-                Pair{L"rtt", L"::bool"},
-                Pair{L"", L"___"},
-                Pair{L"size", L"::int"},
-                Pair{L"maker", L"::address"},
-                Pair{L"collector", L"::address"}
+                Pair{VM_TEXT("__super"), VM_TEXT("::RTTObject")},
+                Pair{VM_TEXT("rtt"), VM_TEXT("::bool")},
+                Pair{VM_TEXT(""), VM_TEXT("   ")},
+                Pair{VM_TEXT("size"), VM_TEXT("::int")},
+                Pair{VM_TEXT("maker"), VM_TEXT("::address")},
+                Pair{VM_TEXT("collector"), VM_TEXT("::address")}
             }, {mem}},
             {{
-                {L"::Type::()", mem},
-                {L"::Type::~()", mem}
+                {VM_TEXT("::Type::()"), mem},
+                {VM_TEXT("::Type::~()"), mem}
             }, {mem}}, {}, {}});
     }
 
     // class of all named types: named type class
     {
-        exports.emplace(data.size(), Str{L"NamedType", mem});
-        data.emplace_back(TFlag<ClassRepr>, ClassRepr{{L"NamedType", mem},
+        exports.emplace(data.size(), Str{VM_TEXT("NamedType"), mem});
+        data.emplace_back(TFlag<ClassRepr>, ClassRepr{{VM_TEXT("NamedType"), mem},
                 true,
                 List<Pair<Str, ObjRefRepr>>{{
-                    Pair{L"__super", L"::Type"},
-                    Pair{L"size", L"::long"},
-                    Pair{L"maker", L"::address"},
-                    Pair{L"collector", L"::address"}
+                    Pair{VM_TEXT("__super"), VM_TEXT("::Type")},
+                    Pair{VM_TEXT("size"), VM_TEXT("::long")},
+                    Pair{VM_TEXT("maker"), VM_TEXT("::address")},
+                    Pair{VM_TEXT("collector"), VM_TEXT("::address")}
                 }, {mem}},
                 {{
-                    {L"::NamedType::()", mem},
-                    {L"::NamedType::~()", mem}
+                    {VM_TEXT("::NamedType::()"), mem},
+                    {VM_TEXT("::NamedType::~()"), mem}
                 }, {mem}}, {}, {}});
     }
 
     // class of all classes: class class
     {
-        exports.emplace(data.size(), Str{L"Class", mem});
-        data.emplace_back(TFlag<ClassRepr>, ClassRepr{{L"Class", mem},
+        exports.emplace(data.size(), Str{VM_TEXT("Class"), mem});
+        data.emplace_back(TFlag<ClassRepr>, ClassRepr{{VM_TEXT("Class"), mem},
             true,
             List<Pair<Str, ObjRefRepr>>{{
-                Pair{L"__super", L"::NamedType"},
-                Pair{L"members", L"::address"},
-                Pair{L"methods", L"::address"},
-                Pair{L"static_members", L"::address"},
-                Pair{L"static_methods", L"::address"}
+                Pair{VM_TEXT("__super"), VM_TEXT("::NamedType")},
+                Pair{VM_TEXT("members"), VM_TEXT("::address")},
+                Pair{VM_TEXT("methods"), VM_TEXT("::address")},
+                Pair{VM_TEXT("static_members"), VM_TEXT("::address")},
+                Pair{VM_TEXT("static_methods"), VM_TEXT("::address")}
             }, {mem}},
             List<ObjRefRepr>{{
-                {L"::Class::()", mem},
-                {L"::Class::~()", mem}
+                {VM_TEXT("::Class::()"), mem},
+                {VM_TEXT("::Class::~()"), mem}
             }, {mem}}, {}, {}});
     }
 
     // named types - primitives
 
-    TypePack<Bool, Byte, Char, Int, Long, Float, Double>::foreach([&]<typename T, size_t I>() {
+    TypePack<Bool, Byte, Char, Int, Long, Float, Double>::foreach([&]<typename T, std::size_t I>() {
         const Char* name;
         if constexpr (std::same_as<T, Bool>)
-            name = L"bool";
+            name = VM_TEXT("bool");
         else if constexpr (std::same_as<T, Byte>)
-            name = L"byte";
+            name = VM_TEXT("byte");
         else if constexpr (std::same_as<T, Char>)
-            name = L"char";
+            name = VM_TEXT("char");
         else if constexpr (std::same_as<T, Int>)
-            name = L"int";
+            name = VM_TEXT("int");
         else if constexpr (std::same_as<T, Long>)
-            name = L"long";
+            name = VM_TEXT("long");
         else if constexpr (std::same_as<T, Float>)
-            name = L"float";
+            name = VM_TEXT("float");
         else if constexpr (std::same_as<T, Double>)
-            name = L"double";
+            name = VM_TEXT("double");
 
         exports.emplace(data.size(), name);
         data.emplace_back(TFlag<NamedTypeRepr>,
             name,
             false,
             static_cast<Int>(sizeof(T)),
-            Str{L"::", mem}.append(name).append(L"::()"),
-            Str{L"::", mem}.append(name).append(L"::~()")
+            Str{VM_TEXT("::"), mem}.append(name).append(VM_TEXT("::()")),
+            Str{VM_TEXT("::"), mem}.append(name).append(VM_TEXT("::~()"))
         );
     });
 
     // named type - unit
     {
-        exports.emplace(data.size(), Str{L"unit", mem});
+        exports.emplace(data.size(), Str{VM_TEXT("unit"), mem});
         data.emplace_back(TFlag<NamedTypeRepr>,
-            Str{L"unit", mem},
+            Str{VM_TEXT("unit"), mem},
             false,
             static_cast<Int>(sizeof(std::uint64_t)),
-            Str{L"::unit::()", mem},
-            Str{L"::unit::~()", mem}
+            Str{VM_TEXT("::unit::()"), mem},
+            Str{VM_TEXT("::unit::~()"), mem}
         );
     }
     // named type address
     {
-        exports.emplace(data.size(), Str{L"address", mem});
+        exports.emplace(data.size(), Str{VM_TEXT("address"), mem});
         data.emplace_back(TFlag<NamedTypeRepr>,
-            Str{L"address", mem},
+            Str{VM_TEXT("address"), mem},
             false,
             static_cast<Int>(sizeof(std::uint64_t)),
-            Str{L"::address::()", mem},
-            Str{L"::address::~()", mem}
+            Str{VM_TEXT("::address::()"), mem},
+            Str{VM_TEXT("::address::~()"), mem}
         );
     }
 
     // named type instruction
     {
-        exports.emplace(data.size(), Str{L"instruction", mem});
+        exports.emplace(data.size(), Str{VM_TEXT("instruction"), mem});
         data.emplace_back(TFlag<NamedTypeRepr>,
-            Str{L"instruction", mem},
+            Str{VM_TEXT("instruction"), mem},
             false,
             static_cast<Int>(sizeof(std::uint64_t)),
-            Str{L"::instruction::()", mem},
-            Str{L"::instruction::~()", mem}
+            Str{VM_TEXT("::instruction::()"), mem},
+            Str{VM_TEXT("::instruction::~()"), mem}
         );
     }
 
     // f-family class
     {
-        exports.emplace(data.size(), Str{L"FFamily", mem});
-        data.emplace_back(TFlag<ClassRepr>, ClassRepr{{L"FFamily", mem},
+        exports.emplace(data.size(), Str{VM_TEXT("FFamily"), mem});
+        data.emplace_back(TFlag<ClassRepr>, ClassRepr{{VM_TEXT("FFamily"), mem},
             true,
             List<Pair<Str, ObjRefRepr>>{{
-                Pair{L"__super", L"::RTTObject"},
-                Pair{L"base_addr", L"::address"},
-                Pair{L"overrides", L"::address"}
+                Pair{VM_TEXT("__super"), VM_TEXT("::RTTObject")},
+                Pair{VM_TEXT("base_addr"), VM_TEXT("::address")},
+                Pair{VM_TEXT("overrides"), VM_TEXT("::address")}
             }, {mem}},
             List<ObjRefRepr>{{
-                {L"::FFamily::()", mem},
-                {L"::FFamily::~()", mem}
+                {VM_TEXT("::FFamily::()"), mem},
+                {VM_TEXT("::FFamily::~()"), mem}
             }}, {}, {}});
     }
 
     // class of all f-override types
     {
-        exports.emplace(data.size(), Str{L"FOverride", mem});
-        data.emplace_back(TFlag<ClassRepr>, ClassRepr{{L"FOverride", mem},
+        exports.emplace(data.size(), Str{VM_TEXT("FOverride"), mem});
+        data.emplace_back(TFlag<ClassRepr>, ClassRepr{{VM_TEXT("FOverride"), mem},
             true,
             List<Pair<Str, ObjRefRepr>>{{
-                Pair{L"__super", L"::Type"},
-                Pair{L"param_types", L"::address"},
-                Pair{L"return_type", L"::address"}
+                Pair{VM_TEXT("__super"), VM_TEXT("::Type")},
+                Pair{VM_TEXT("param_types"), VM_TEXT("::address")},
+                Pair{VM_TEXT("return_type"), VM_TEXT("::address")}
             }, {mem}},
             List<ObjRefRepr>{{
-                {L"::FOverride::()", mem},
-                {L"::FOverride::~()", mem}
+                {VM_TEXT("::FOverride::()"), mem},
+                {VM_TEXT("::FOverride::~()"), mem}
             }}, {}, {}});
     }
 
     // class of all array types
     {
-        exports.emplace(data.size(), Str{L"ArrayType", mem});
-        data.emplace_back(TFlag<ClassRepr>, ClassRepr{{L"ArrayType", mem},
+        exports.emplace(data.size(), Str{VM_TEXT("ArrayType"), mem});
+        data.emplace_back(TFlag<ClassRepr>, ClassRepr{{VM_TEXT("ArrayType"), mem},
             true,
             List<Pair<Str, ObjRefRepr>>{{
-                Pair{L"__super", L"::Type"},
-                Pair{L"element_type", L"::address"},
-                Pair{L"length", L"::long"}
+                Pair{VM_TEXT("__super"), VM_TEXT("::Type")},
+                Pair{VM_TEXT("element_type"), VM_TEXT("::address")},
+                Pair{VM_TEXT("length"), VM_TEXT("::long")}
             }, {mem}},
             List<ObjRefRepr>{{
-                {L"::ArrayType::()", mem},
-                {L"::ArrayType::~()", mem},
-                {L"::ArrayType::constructor", mem},
-                {L"::ArrayType::destructor", mem}
+                {VM_TEXT("::ArrayType::()"), mem},
+                {VM_TEXT("::ArrayType::~()"), mem},
+                {VM_TEXT("::ArrayType::constructor"), mem},
+                {VM_TEXT("::ArrayType::destructor"), mem}
             }}, {}, {}});
     }
 
     // member-info class
     {
-        exports.emplace(data.size(), Str{L"MemberInfo", mem});
-        data.emplace_back(TFlag<ClassRepr>, ClassRepr{{L"MemberInfo", mem},
+        exports.emplace(data.size(), Str{VM_TEXT("MemberInfo"), mem});
+        data.emplace_back(TFlag<ClassRepr>, ClassRepr{{VM_TEXT("MemberInfo"), mem},
             false,
             List<Pair<Str, ObjRefRepr>>{{
-                Pair{L"name", L"::address"},
-                Pair{L"type", L"::address"},
-                Pair{L"offset", L"::long"}
+                Pair{VM_TEXT("name"), VM_TEXT("::address")},
+                Pair{VM_TEXT("type"), VM_TEXT("::address")},
+                Pair{VM_TEXT("offset"), VM_TEXT("::long")}
             }, {mem}},
             List<ObjRefRepr>{{
-                {L"::MemberInfo::()", mem},
-                {L"::MemberInfo::~()", mem}
+                {VM_TEXT("::MemberInfo::()"), mem},
+                {VM_TEXT("::MemberInfo::~()"), mem}
             }}, {}, {}});
-    }
-
-    // todo f-override type
-    {
-
     }
 
     // single override f-families
     {
-        const auto address_t = Str{L"::address", mem};
-        const auto unit_t = Str{L"::unit", mem};
+        const auto address_t = Str{VM_TEXT("::address"), mem};
+        const auto unit_t = Str{VM_TEXT("::unit"), mem};
 
-        exports.emplace(data.size(), Str{L"RTUObject::()", mem});
+        exports.emplace(data.size(), Str{VM_TEXT("RTUObject::()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
             {},
             unit_t,
             FOverrideRepr::ImplRepr{TFlag<NtvId>, "RTUObject::()", mem}
         }}, mem});
 
-        exports.emplace(data.size(), Str{L"RTUObject::~()", mem});
+        exports.emplace(data.size(), Str{VM_TEXT("RTUObject::~()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
             {},
             unit_t,
@@ -272,14 +269,14 @@ Package Package::anonymous_builtin(MManager* const mem) noexcept {
 
 
 
-        exports.emplace(data.size(), Str{L"RTTObject::()", mem});
+        exports.emplace(data.size(), Str{VM_TEXT("RTTObject::()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
             {},
             unit_t,
             FOverrideRepr::ImplRepr{TFlag<NtvId>, "RTTObject::()", mem}
         }}, mem});
 
-        exports.emplace(data.size(), Str{L"RTTObject::~()", mem});
+        exports.emplace(data.size(), Str{VM_TEXT("RTTObject::~()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
             {},
             unit_t,
@@ -287,18 +284,18 @@ Package Package::anonymous_builtin(MManager* const mem) noexcept {
         }}, mem});
 
 
-        const auto bool_t = Str{L"::bool", mem};
-        const auto int_t = Str{L"::int", mem};
+        const auto bool_t = Str{VM_TEXT("::bool"), mem};
+        const auto int_t = Str{VM_TEXT("::int"), mem};
 
 
-        exports.emplace(data.size(), Str{L"Type::()", mem});
+        exports.emplace(data.size(), Str{VM_TEXT("Type::()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
             List<ObjRefRepr>{{bool_t, int_t, address_t, address_t}, mem},
             unit_t,
             FOverrideRepr::ImplRepr{TFlag<NtvId>, "Type::()", mem}
         }}, mem});
 
-        exports.emplace(data.size(), Str{L"Type::~()", mem});
+        exports.emplace(data.size(), Str{VM_TEXT("Type::~()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
             {},
             unit_t,
@@ -306,17 +303,17 @@ Package Package::anonymous_builtin(MManager* const mem) noexcept {
         }}, mem});
 
 
-        const auto long_t = Str{L"::long", mem};
+        const auto long_t = Str{VM_TEXT("::long"), mem};
 
 
-        exports.emplace(data.size(), Str{L"ArrayType::()", mem});
+        exports.emplace(data.size(), Str{VM_TEXT("ArrayType::()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
             List<ObjRefRepr>{{bool_t, int_t, address_t, address_t, address_t, long_t}, mem},
             unit_t,
             FOverrideRepr::ImplRepr{TFlag<NtvId>, "ArrayType::()", mem}
         }}, mem});
 
-        exports.emplace(data.size(), Str{L"ArrayType::~()", mem});
+        exports.emplace(data.size(), Str{VM_TEXT("ArrayType::~()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
             {},
             unit_t,
@@ -325,14 +322,14 @@ Package Package::anonymous_builtin(MManager* const mem) noexcept {
 
 
 
-        exports.emplace(data.size(), Str{L"ArrayType::constructor", mem});
+        exports.emplace(data.size(), Str{VM_TEXT("ArrayType::constructor"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
             List<ObjRefRepr>{{address_t}, mem},
             unit_t,
             FOverrideRepr::ImplRepr{TFlag<NtvId>, "ArrayType::constructor", mem}
         }}, mem});
 
-        exports.emplace(data.size(), Str{L"ArrayType::destructor", mem});
+        exports.emplace(data.size(), Str{VM_TEXT("ArrayType::destructor"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
             List<ObjRefRepr>{{address_t}, mem},
             unit_t,
@@ -341,14 +338,14 @@ Package Package::anonymous_builtin(MManager* const mem) noexcept {
 
 
 
-        exports.emplace(data.size(), Str{L"NamedType::()", mem});
+        exports.emplace(data.size(), Str{VM_TEXT("NamedType::()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
             List<ObjRefRepr>{{bool_t, int_t, address_t, address_t, address_t}, mem},
             unit_t,
             FOverrideRepr::ImplRepr{TFlag<NtvId>, "NamedType::()", mem}
         }}, mem});
 
-        exports.emplace(data.size(), Str{L"NamedType::~()", mem});
+        exports.emplace(data.size(), Str{VM_TEXT("NamedType::~()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
             {},
             unit_t,
@@ -357,14 +354,14 @@ Package Package::anonymous_builtin(MManager* const mem) noexcept {
 
 
 
-        exports.emplace(data.size(), Str{L"MemberInfo::()", mem});
+        exports.emplace(data.size(), Str{VM_TEXT("MemberInfo::()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
             List<ObjRefRepr>{{address_t, address_t, long_t}, mem},
             unit_t,
             FOverrideRepr::ImplRepr{TFlag<NtvId>, "MemberInfo::()", mem}
         }}, mem});
 
-        exports.emplace(data.size(), Str{L"MemberInfo::~()", mem});
+        exports.emplace(data.size(), Str{VM_TEXT("MemberInfo::~()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
             {},
             unit_t,
@@ -373,14 +370,14 @@ Package Package::anonymous_builtin(MManager* const mem) noexcept {
 
 
 
-        exports.emplace(data.size(), Str{L"Class::()", mem});
+        exports.emplace(data.size(), Str{VM_TEXT("Class::()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
             List<ObjRefRepr>{{bool_t, int_t, address_t, address_t, address_t, address_t, address_t, address_t, address_t}, mem},
             unit_t,
             FOverrideRepr::ImplRepr{TFlag<NtvId>, "Class::()", mem}
         }}, mem});
 
-        exports.emplace(data.size(), Str{L"Class::~()", mem});
+        exports.emplace(data.size(), Str{VM_TEXT("Class::~()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
             {},
             unit_t,
@@ -390,14 +387,14 @@ Package Package::anonymous_builtin(MManager* const mem) noexcept {
 
 
 
-        exports.emplace(data.size(), Str{L"FOverride::()", mem});
+        exports.emplace(data.size(), Str{VM_TEXT("FOverride::()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
             List<ObjRefRepr>{{bool_t, address_t}, mem},
             unit_t,
             FOverrideRepr::ImplRepr{TFlag<NtvId>, "FOverride::()", mem}
         }}, mem});
 
-        exports.emplace(data.size(), Str{L"FOverride::~()", mem});
+        exports.emplace(data.size(), Str{VM_TEXT("FOverride::~()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
             {},
             unit_t,
@@ -406,14 +403,14 @@ Package Package::anonymous_builtin(MManager* const mem) noexcept {
 
 
 
-        exports.emplace(data.size(), Str{L"FFamily::()", mem});
+        exports.emplace(data.size(), Str{VM_TEXT("FFamily::()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
             List<ObjRefRepr>{{address_t, address_t}, mem},
             unit_t,
             FOverrideRepr::ImplRepr{TFlag<NtvId>, "FFamily::()", mem}
         }}, mem});
 
-        exports.emplace(data.size(), Str{L"FFamily::~()", mem});
+        exports.emplace(data.size(), Str{VM_TEXT("FFamily::~()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
             {},
             unit_t,
@@ -422,19 +419,19 @@ Package Package::anonymous_builtin(MManager* const mem) noexcept {
 
 
         const auto
-            byte_t = Str{L"::byte", mem},
-            char_t = Str{L"::char", mem},
-            float_t = Str{L"::float", mem},
-            double_t = Str{L"::double", mem};
+            byte_t = Str{VM_TEXT("::byte"), mem},
+            char_t = Str{VM_TEXT("::char"), mem},
+            float_t = Str{VM_TEXT("::float"), mem},
+            double_t = Str{VM_TEXT("::double"), mem};
 
 #define OP(TYPE)\
-        exports.emplace(data.size(), cvt(NStr{#TYPE, mem}) += L"::()");\
+        exports.emplace(data.size(), cvt(MBStr{#TYPE, mem}) += VM_TEXT("::()"));\
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{\
             List<ObjRefRepr>{{TYPE##_t}, mem},\
             unit_t,\
             FOverrideRepr::ImplRepr{TFlag<NtvId>, #TYPE "::()", mem}\
         }}, mem});\
-        exports.emplace(data.size(), cvt(NStr{#TYPE, mem}) += L"::~()");\
+        exports.emplace(data.size(), cvt(MBStr{#TYPE, mem}) += VM_TEXT("::~()"));\
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{\
             {},\
             unit_t,\
@@ -452,28 +449,28 @@ Package Package::anonymous_builtin(MManager* const mem) noexcept {
 
 #undef OP
 
-        exports.emplace(data.size(), Str{L"unit::()", mem});
+        exports.emplace(data.size(), Str{VM_TEXT("unit::()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
             {},
             unit_t,
             FOverrideRepr::ImplRepr{TFlag<NtvId>, "unit::()", mem}
         }}, mem});
 
-        exports.emplace(data.size(), Str{L"unit::~()", mem});
+        exports.emplace(data.size(), Str{VM_TEXT("unit::~()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
             {},
             unit_t,
             FOverrideRepr::ImplRepr{TFlag<NtvId>, "unit::~()", mem}
         }}, mem});
 
-        exports.emplace(data.size(), Str{L"instruction::()", mem});
+        exports.emplace(data.size(), Str{VM_TEXT("instruction::()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
             List<ObjRefRepr>{{byte_t, int_t}, mem},
             unit_t,
             FOverrideRepr::ImplRepr{TFlag<NtvId>, "instruction::()", mem}
         }}, mem});
 
-        exports.emplace(data.size(), Str{L"instruction::~()", mem});
+        exports.emplace(data.size(), Str{VM_TEXT("instruction::~()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
             {},
             unit_t,
@@ -493,12 +490,24 @@ Package Package::io(MManager *const mem) noexcept {
     auto exports = Map<USize, ObjRefRepr>{mem};
 
     {
-        exports.emplace(data.size(), Str{L"write", mem});
+        exports.emplace(data.size(), Str{VM_TEXT("write"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{
             FOverrideRepr{
-                List<ObjRefRepr>{{{L"::char", mem}}, mem},
-                ObjRefRepr{L"::unit", mem},
+                List<ObjRefRepr>{{{VM_TEXT("::char"), mem}}, mem},
+                ObjRefRepr{VM_TEXT("::unit"), mem},
                 FOverrideRepr::ImplRepr{TFlag<NtvId>, "write::0", mem}
+            }
+        }, mem});
+        // todo more writable object
+    }
+
+    {
+        exports.emplace(data.size(), Str{VM_TEXT("println"), mem});
+        data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{
+            FOverrideRepr{
+                List<ObjRefRepr>{{{VM_TEXT("::address"), mem}}, mem},
+                ObjRefRepr{VM_TEXT("::unit"), mem},
+                FOverrideRepr::ImplRepr{TFlag<NtvId>, "println::0", mem}
             }
         }, mem});
     }

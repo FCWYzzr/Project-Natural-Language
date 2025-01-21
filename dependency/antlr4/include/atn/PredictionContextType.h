@@ -12,7 +12,7 @@
 namespace antlr4 {
 namespace atn {
 
-  enum class PredictionContextType : size_t {
+  enum class PredictionContextType : std::size_t {
     SINGLETON = 1,
     ARRAY = 2,
   };

@@ -2,7 +2,7 @@
 // Created by FCWY on 24-12-28.
 //
 import pnl.ll;
-import <iostream>;
+#include <iostream>
 import nlsm.grammar;
 
 using namespace pnl::ll;

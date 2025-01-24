@@ -45,8 +45,11 @@ else()
     endif ()
 endif ()
 
-set(PNL-header "${PROJECT_SOURCE_DIR}/include")
-
+set(PNL-Include "${PROJECT_SOURCE_DIR}/include")
+file(GLOB pnl-headers
+    ${PNL-Include}/*
+)
+install(FILES ${pnl-headers} DESTINATION "${loc}/include")
 add_subdirectory(dependency)
 add_subdirectory(src/pnl/ll)
 

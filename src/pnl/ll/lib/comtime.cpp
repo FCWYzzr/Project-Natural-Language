@@ -27,6 +27,31 @@ ObjectRepr::operator ObjectRepr::Delegated () noexcept {
     );
 }
 
+Package::Package(List<Content> data, Map<USize, ObjRefRepr> exports) noexcept:
+    data(std::move(data)),
+    exports(std::move(exports)) {}
+
+Package::Package(Package &&other) noexcept:
+    data(std::move(other.data)),
+    exports(std::move(other.exports)) {}
+
+Package & Package::operator=(const Package &other) noexcept {
+    if (this == &other)
+        return *this;
+    data = other.data;
+    exports = other.exports;
+    return *this;
+}
+
+Package & Package::operator=(Package &&other) noexcept {
+    if (this == &other)
+        return *this;
+    data = std::move(other.data);
+    exports = std::move(other.exports);
+    return *this;
+}
+
+
 Package::operator Package::Delegated () noexcept {
     return std::tie(
         data,
@@ -42,69 +67,58 @@ Package Package::anonymous_builtin(MManager* const mem) noexcept {
     {
         exports.emplace(data.size(), Str{VM_TEXT("RTUObject"), mem});
         data.emplace_back(TFlag<ClassRepr>, ClassRepr{{VM_TEXT("RTUObject"), mem},
-                false,
+            VM_TEXT("::RTUObject::()"),
+            VM_TEXT("::RTUObject::~()"),
                 {},
-                {{
-                    {VM_TEXT("::RTUObject::()"), mem},
-                    {VM_TEXT("::RTUObject::~()"), mem}
-                }, {mem}}, {}, {}});
+                {}, {}, {}});
     }
 
     // rtt object class
     {
         exports.emplace(data.size(), Str{VM_TEXT("RTTObject"), mem});
         data.emplace_back(TFlag<ClassRepr>, ClassRepr{{VM_TEXT("RTTObject"), mem},
-                true,
+            VM_TEXT("::RTTObject::()"),
+            VM_TEXT("::RTTObject::~()"),
                 List<Pair<Str, ObjRefRepr>>{{
                     Pair{VM_TEXT("type"), VM_TEXT("::address")}
                 }, {mem}},
-                {{
-                    {VM_TEXT("::RTTObject::()")},
-                    {VM_TEXT("::RTTObject::~()")}
-                }, {mem}}, {}, {}});
+                {}, {}, {}});
     }
 
     // class of all types: type class
     {
         exports.emplace(data.size(), Str{VM_TEXT("Type"), mem});
         data.emplace_back(TFlag<ClassRepr>, ClassRepr{{VM_TEXT("Type"), mem},
-            true,
+            VM_TEXT("::Type::()"),
+            VM_TEXT("::Type::~()"),
             List<Pair<Str, ObjRefRepr>>{{
                 Pair{VM_TEXT("__super"), VM_TEXT("::RTTObject")},
-                Pair{VM_TEXT("rtt"), VM_TEXT("::bool")},
-                Pair{VM_TEXT(""), VM_TEXT("   ")},
-                Pair{VM_TEXT("size"), VM_TEXT("::int")},
+                Pair{VM_TEXT("size"), VM_TEXT("::long")},
                 Pair{VM_TEXT("maker"), VM_TEXT("::address")},
                 Pair{VM_TEXT("collector"), VM_TEXT("::address")}
             }, {mem}},
-            {{
-                {VM_TEXT("::Type::()"), mem},
-                {VM_TEXT("::Type::~()"), mem}
-            }, {mem}}, {}, {}});
+            {}, {}, {}});
     }
 
     // class of all named types: named type class
     {
         exports.emplace(data.size(), Str{VM_TEXT("NamedType"), mem});
         data.emplace_back(TFlag<ClassRepr>, ClassRepr{{VM_TEXT("NamedType"), mem},
-                true,
+            VM_TEXT("::NamedType::()"),
+            VM_TEXT("::NamedType::~()"),
                 List<Pair<Str, ObjRefRepr>>{{
                     Pair{VM_TEXT("__super"), VM_TEXT("::Type")},
-                    Pair{VM_TEXT("size"), VM_TEXT("::long")},
-                    Pair{VM_TEXT("maker"), VM_TEXT("::address")},
-                    Pair{VM_TEXT("collector"), VM_TEXT("::address")}
+                    Pair{VM_TEXT("name"), VM_TEXT("::address")},
                 }, {mem}},
-                {{
-                    {VM_TEXT("::NamedType::()"), mem},
-                    {VM_TEXT("::NamedType::~()"), mem}
-                }, {mem}}, {}, {}});
+                {}, {}, {}});
     }
 
     // class of all classes: class class
     {
         exports.emplace(data.size(), Str{VM_TEXT("Class"), mem});
         data.emplace_back(TFlag<ClassRepr>, ClassRepr{{VM_TEXT("Class"), mem},
-            true,
+            VM_TEXT("::Class::()"),
+            VM_TEXT("::Class::~()"),
             List<Pair<Str, ObjRefRepr>>{{
                 Pair{VM_TEXT("__super"), VM_TEXT("::NamedType")},
                 Pair{VM_TEXT("members"), VM_TEXT("::address")},
@@ -112,13 +126,21 @@ Package Package::anonymous_builtin(MManager* const mem) noexcept {
                 Pair{VM_TEXT("static_members"), VM_TEXT("::address")},
                 Pair{VM_TEXT("static_methods"), VM_TEXT("::address")}
             }, {mem}},
-            List<ObjRefRepr>{{
-                {VM_TEXT("::Class::()"), mem},
-                {VM_TEXT("::Class::~()"), mem}
-            }, {mem}}, {}, {}});
+            {}, {}, {}});
     }
 
     // named types - primitives
+
+    // named type - unit
+    {
+        exports.emplace(data.size(), Str{VM_TEXT("unit"), mem});
+        data.emplace_back(TFlag<NamedTypeRepr>,
+            Str{VM_TEXT("unit"), mem},
+            0ll,
+            Str{VM_TEXT("::unit::()"), mem},
+            Str{VM_TEXT("::unit::~()"), mem}
+        );
+    }
 
     TypePack<Bool, Byte, Char, Int, Long, Float, Double>::foreach([&]<typename T, std::size_t I>() {
         const Char* name;
@@ -140,31 +162,19 @@ Package Package::anonymous_builtin(MManager* const mem) noexcept {
         exports.emplace(data.size(), name);
         data.emplace_back(TFlag<NamedTypeRepr>,
             name,
-            false,
-            static_cast<Int>(sizeof(T)),
+            static_cast<Long>(sizeof(T)),
             Str{VM_TEXT("::"), mem}.append(name).append(VM_TEXT("::()")),
             Str{VM_TEXT("::"), mem}.append(name).append(VM_TEXT("::~()"))
         );
     });
 
-    // named type - unit
-    {
-        exports.emplace(data.size(), Str{VM_TEXT("unit"), mem});
-        data.emplace_back(TFlag<NamedTypeRepr>,
-            Str{VM_TEXT("unit"), mem},
-            false,
-            static_cast<Int>(sizeof(std::uint64_t)),
-            Str{VM_TEXT("::unit::()"), mem},
-            Str{VM_TEXT("::unit::~()"), mem}
-        );
-    }
+
     // named type address
     {
         exports.emplace(data.size(), Str{VM_TEXT("address"), mem});
         data.emplace_back(TFlag<NamedTypeRepr>,
             Str{VM_TEXT("address"), mem},
-            false,
-            static_cast<Int>(sizeof(std::uint64_t)),
+            static_cast<Long>(sizeof(std::uint64_t)),
             Str{VM_TEXT("::address::()"), mem},
             Str{VM_TEXT("::address::~()"), mem}
         );
@@ -175,8 +185,7 @@ Package Package::anonymous_builtin(MManager* const mem) noexcept {
         exports.emplace(data.size(), Str{VM_TEXT("instruction"), mem});
         data.emplace_back(TFlag<NamedTypeRepr>,
             Str{VM_TEXT("instruction"), mem},
-            false,
-            static_cast<Int>(sizeof(std::uint64_t)),
+            static_cast<Long>(sizeof(std::uint32_t)),
             Str{VM_TEXT("::instruction::()"), mem},
             Str{VM_TEXT("::instruction::~()"), mem}
         );
@@ -186,31 +195,30 @@ Package Package::anonymous_builtin(MManager* const mem) noexcept {
     {
         exports.emplace(data.size(), Str{VM_TEXT("FFamily"), mem});
         data.emplace_back(TFlag<ClassRepr>, ClassRepr{{VM_TEXT("FFamily"), mem},
-            true,
+            VM_TEXT("::FFamily::()"),
+            VM_TEXT("::FFamily::~()"),
             List<Pair<Str, ObjRefRepr>>{{
                 Pair{VM_TEXT("__super"), VM_TEXT("::RTTObject")},
                 Pair{VM_TEXT("base_addr"), VM_TEXT("::address")},
                 Pair{VM_TEXT("overrides"), VM_TEXT("::address")}
             }, {mem}},
-            List<ObjRefRepr>{{
-                {VM_TEXT("::FFamily::()"), mem},
-                {VM_TEXT("::FFamily::~()"), mem}
-            }}, {}, {}});
+            {}, {}, {}});
     }
 
     // class of all f-override types
     {
         exports.emplace(data.size(), Str{VM_TEXT("FOverride"), mem});
         data.emplace_back(TFlag<ClassRepr>, ClassRepr{{VM_TEXT("FOverride"), mem},
-            true,
+            VM_TEXT("::FOverride::()"),
+            VM_TEXT("::FOverride::~()"),
             List<Pair<Str, ObjRefRepr>>{{
                 Pair{VM_TEXT("__super"), VM_TEXT("::Type")},
                 Pair{VM_TEXT("param_types"), VM_TEXT("::address")},
                 Pair{VM_TEXT("return_type"), VM_TEXT("::address")}
             }, {mem}},
             List<ObjRefRepr>{{
-                {VM_TEXT("::FOverride::()"), mem},
-                {VM_TEXT("::FOverride::~()"), mem}
+                {VM_TEXT("::FOverride::maker"), mem},
+                {VM_TEXT("::FOverride::collector"), mem}
             }}, {}, {}});
     }
 
@@ -218,17 +226,16 @@ Package Package::anonymous_builtin(MManager* const mem) noexcept {
     {
         exports.emplace(data.size(), Str{VM_TEXT("ArrayType"), mem});
         data.emplace_back(TFlag<ClassRepr>, ClassRepr{{VM_TEXT("ArrayType"), mem},
-            true,
+            VM_TEXT("::ArrayType::()"),
+            VM_TEXT("::ArrayType::~()"),
             List<Pair<Str, ObjRefRepr>>{{
                 Pair{VM_TEXT("__super"), VM_TEXT("::Type")},
                 Pair{VM_TEXT("element_type"), VM_TEXT("::address")},
                 Pair{VM_TEXT("length"), VM_TEXT("::long")}
             }, {mem}},
             List<ObjRefRepr>{{
-                {VM_TEXT("::ArrayType::()"), mem},
-                {VM_TEXT("::ArrayType::~()"), mem},
-                {VM_TEXT("::ArrayType::constructor"), mem},
-                {VM_TEXT("::ArrayType::destructor"), mem}
+                {VM_TEXT("::ArrayType::maker"), mem},
+                {VM_TEXT("::ArrayType::collector"), mem}
             }}, {}, {}});
     }
 
@@ -236,16 +243,14 @@ Package Package::anonymous_builtin(MManager* const mem) noexcept {
     {
         exports.emplace(data.size(), Str{VM_TEXT("MemberInfo"), mem});
         data.emplace_back(TFlag<ClassRepr>, ClassRepr{{VM_TEXT("MemberInfo"), mem},
-            false,
+            VM_TEXT("::MemberInfo::()"),
+            VM_TEXT("::MemberInfo::~()"),
             List<Pair<Str, ObjRefRepr>>{{
                 Pair{VM_TEXT("name"), VM_TEXT("::address")},
                 Pair{VM_TEXT("type"), VM_TEXT("::address")},
                 Pair{VM_TEXT("offset"), VM_TEXT("::long")}
             }, {mem}},
-            List<ObjRefRepr>{{
-                {VM_TEXT("::MemberInfo::()"), mem},
-                {VM_TEXT("::MemberInfo::~()"), mem}
-            }}, {}, {}});
+            {}, {}, {}});
     }
 
     // single override f-families
@@ -255,14 +260,14 @@ Package Package::anonymous_builtin(MManager* const mem) noexcept {
 
         exports.emplace(data.size(), Str{VM_TEXT("RTUObject::()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
-            {},
+            {address_t},
             unit_t,
             FOverrideRepr::ImplRepr{TFlag<NtvId>, "RTUObject::()", mem}
         }}, mem});
 
         exports.emplace(data.size(), Str{VM_TEXT("RTUObject::~()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
-            {},
+            {address_t},
             unit_t,
             FOverrideRepr::ImplRepr{TFlag<NtvId>, "RTUObject::~()", mem}
         }}, mem});
@@ -271,83 +276,83 @@ Package Package::anonymous_builtin(MManager* const mem) noexcept {
 
         exports.emplace(data.size(), Str{VM_TEXT("RTTObject::()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
-            {},
+            {address_t},
             unit_t,
             FOverrideRepr::ImplRepr{TFlag<NtvId>, "RTTObject::()", mem}
         }}, mem});
 
         exports.emplace(data.size(), Str{VM_TEXT("RTTObject::~()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
-            {},
+            {address_t},
             unit_t,
-            FOverrideRepr::ImplRepr{TFlag<NtvId>, "RTUObject::~()", mem}
+            FOverrideRepr::ImplRepr{TFlag<NtvId>, "RTTObject::~()", mem}
         }}, mem});
 
 
         const auto bool_t = Str{VM_TEXT("::bool"), mem};
-        const auto int_t = Str{VM_TEXT("::int"), mem};
+        const auto long_t = Str{VM_TEXT("::long"), mem};
 
 
         exports.emplace(data.size(), Str{VM_TEXT("Type::()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
-            List<ObjRefRepr>{{bool_t, int_t, address_t, address_t}, mem},
+            List<ObjRefRepr>{{address_t, long_t, address_t, address_t}, mem},
             unit_t,
             FOverrideRepr::ImplRepr{TFlag<NtvId>, "Type::()", mem}
         }}, mem});
 
         exports.emplace(data.size(), Str{VM_TEXT("Type::~()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
-            {},
+            {address_t},
             unit_t,
             FOverrideRepr::ImplRepr{TFlag<NtvId>, "Type::~()", mem}
         }}, mem});
 
 
-        const auto long_t = Str{VM_TEXT("::long"), mem};
+        const auto int_t = Str{VM_TEXT("::int"), mem};
 
 
         exports.emplace(data.size(), Str{VM_TEXT("ArrayType::()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
-            List<ObjRefRepr>{{bool_t, int_t, address_t, address_t, address_t, long_t}, mem},
+            List<ObjRefRepr>{{address_t, address_t, long_t}, mem},
             unit_t,
             FOverrideRepr::ImplRepr{TFlag<NtvId>, "ArrayType::()", mem}
         }}, mem});
 
         exports.emplace(data.size(), Str{VM_TEXT("ArrayType::~()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
-            {},
+            {address_t},
             unit_t,
             FOverrideRepr::ImplRepr{TFlag<NtvId>, "ArrayType::~()", mem}
         }}, mem});
 
 
 
-        exports.emplace(data.size(), Str{VM_TEXT("ArrayType::constructor"), mem});
+        exports.emplace(data.size(), Str{VM_TEXT("ArrayType::maker"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
-            List<ObjRefRepr>{{address_t}, mem},
+            {address_t},
             unit_t,
-            FOverrideRepr::ImplRepr{TFlag<NtvId>, "ArrayType::constructor", mem}
+            FOverrideRepr::ImplRepr{TFlag<NtvId>, "ArrayType::maker", mem}
         }}, mem});
 
-        exports.emplace(data.size(), Str{VM_TEXT("ArrayType::destructor"), mem});
+        exports.emplace(data.size(), Str{VM_TEXT("ArrayType::collector"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
             List<ObjRefRepr>{{address_t}, mem},
             unit_t,
-            FOverrideRepr::ImplRepr{TFlag<NtvId>, "ArrayType::destructor", mem}
+            FOverrideRepr::ImplRepr{TFlag<NtvId>, "ArrayType::collector", mem}
         }}, mem});
 
 
 
         exports.emplace(data.size(), Str{VM_TEXT("NamedType::()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
-            List<ObjRefRepr>{{bool_t, int_t, address_t, address_t, address_t}, mem},
+            List<ObjRefRepr>{{address_t, long_t, address_t, address_t, address_t}, mem},
             unit_t,
             FOverrideRepr::ImplRepr{TFlag<NtvId>, "NamedType::()", mem}
         }}, mem});
 
         exports.emplace(data.size(), Str{VM_TEXT("NamedType::~()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
-            {},
+            {address_t},
             unit_t,
             FOverrideRepr::ImplRepr{TFlag<NtvId>, "NamedType::~()", mem}
         }}, mem});
@@ -356,14 +361,14 @@ Package Package::anonymous_builtin(MManager* const mem) noexcept {
 
         exports.emplace(data.size(), Str{VM_TEXT("MemberInfo::()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
-            List<ObjRefRepr>{{address_t, address_t, long_t}, mem},
+            List<ObjRefRepr>{{address_t, address_t, address_t, long_t}, mem},
             unit_t,
             FOverrideRepr::ImplRepr{TFlag<NtvId>, "MemberInfo::()", mem}
         }}, mem});
 
         exports.emplace(data.size(), Str{VM_TEXT("MemberInfo::~()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
-            {},
+            {address_t},
             unit_t,
             FOverrideRepr::ImplRepr{TFlag<NtvId>, "MemberInfo::~()", mem}
         }}, mem});
@@ -372,14 +377,14 @@ Package Package::anonymous_builtin(MManager* const mem) noexcept {
 
         exports.emplace(data.size(), Str{VM_TEXT("Class::()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
-            List<ObjRefRepr>{{bool_t, int_t, address_t, address_t, address_t, address_t, address_t, address_t, address_t}, mem},
+            List<ObjRefRepr>{{address_t, long_t, address_t, address_t, address_t, address_t, address_t, address_t, address_t}, mem},
             unit_t,
             FOverrideRepr::ImplRepr{TFlag<NtvId>, "Class::()", mem}
         }}, mem});
 
         exports.emplace(data.size(), Str{VM_TEXT("Class::~()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
-            {},
+            {address_t},
             unit_t,
             FOverrideRepr::ImplRepr{TFlag<NtvId>, "Class::~()", mem}
         }}, mem});
@@ -389,14 +394,14 @@ Package Package::anonymous_builtin(MManager* const mem) noexcept {
 
         exports.emplace(data.size(), Str{VM_TEXT("FOverride::()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
-            List<ObjRefRepr>{{bool_t, address_t}, mem},
+            List<ObjRefRepr>{{address_t, bool_t, address_t}, mem},
             unit_t,
             FOverrideRepr::ImplRepr{TFlag<NtvId>, "FOverride::()", mem}
         }}, mem});
 
         exports.emplace(data.size(), Str{VM_TEXT("FOverride::~()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
-            {},
+            {address_t},
             unit_t,
             FOverrideRepr::ImplRepr{TFlag<NtvId>, "FOverride::~()", mem}
         }}, mem});
@@ -405,14 +410,14 @@ Package Package::anonymous_builtin(MManager* const mem) noexcept {
 
         exports.emplace(data.size(), Str{VM_TEXT("FFamily::()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
-            List<ObjRefRepr>{{address_t, address_t}, mem},
+            List<ObjRefRepr>{{address_t, address_t, address_t}, mem},
             unit_t,
             FOverrideRepr::ImplRepr{TFlag<NtvId>, "FFamily::()", mem}
         }}, mem});
 
         exports.emplace(data.size(), Str{VM_TEXT("FFamily::~()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
-            {},
+            {address_t},
             unit_t,
             FOverrideRepr::ImplRepr{TFlag<NtvId>, "FFamily::~()", mem}
         }}, mem});
@@ -424,16 +429,30 @@ Package Package::anonymous_builtin(MManager* const mem) noexcept {
             float_t = Str{VM_TEXT("::float"), mem},
             double_t = Str{VM_TEXT("::double"), mem};
 
+        exports.emplace(data.size(), Str{VM_TEXT("unit::()"), mem});
+        data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
+            {address_t},
+            unit_t,
+            FOverrideRepr::ImplRepr{TFlag<NtvId>, "unit::()", mem}
+        }}, mem});
+
+        exports.emplace(data.size(), Str{VM_TEXT("unit::~()"), mem});
+        data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
+            {address_t},
+            unit_t,
+            FOverrideRepr::ImplRepr{TFlag<NtvId>, "unit::~()", mem}
+        }}, mem});
+
 #define OP(TYPE)\
         exports.emplace(data.size(), cvt(MBStr{#TYPE, mem}) += VM_TEXT("::()"));\
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{\
-            List<ObjRefRepr>{{TYPE##_t}, mem},\
+            {address_t, TYPE##_t},\
             unit_t,\
             FOverrideRepr::ImplRepr{TFlag<NtvId>, #TYPE "::()", mem}\
         }}, mem});\
         exports.emplace(data.size(), cvt(MBStr{#TYPE, mem}) += VM_TEXT("::~()"));\
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{\
-            {},\
+            {address_t},\
             unit_t,\
             FOverrideRepr::ImplRepr{TFlag<NtvId>, #TYPE  "::~()", mem}\
         }}, mem});
@@ -449,30 +468,16 @@ Package Package::anonymous_builtin(MManager* const mem) noexcept {
 
 #undef OP
 
-        exports.emplace(data.size(), Str{VM_TEXT("unit::()"), mem});
-        data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
-            {},
-            unit_t,
-            FOverrideRepr::ImplRepr{TFlag<NtvId>, "unit::()", mem}
-        }}, mem});
-
-        exports.emplace(data.size(), Str{VM_TEXT("unit::~()"), mem});
-        data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
-            {},
-            unit_t,
-            FOverrideRepr::ImplRepr{TFlag<NtvId>, "unit::~()", mem}
-        }}, mem});
-
         exports.emplace(data.size(), Str{VM_TEXT("instruction::()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
-            List<ObjRefRepr>{{byte_t, int_t}, mem},
+            {address_t, byte_t, int_t},
             unit_t,
             FOverrideRepr::ImplRepr{TFlag<NtvId>, "instruction::()", mem}
         }}, mem});
 
         exports.emplace(data.size(), Str{VM_TEXT("instruction::~()"), mem});
         data.emplace_back(TFlag<FFamilyRepr>, FFamilyRepr{{FOverrideRepr{
-            {},
+            {address_t},
             unit_t,
             FOverrideRepr::ImplRepr{TFlag<NtvId>, "instruction::~()", mem}
         }}, mem});

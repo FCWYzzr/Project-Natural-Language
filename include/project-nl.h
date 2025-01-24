@@ -5,6 +5,7 @@
 #ifndef PROJECT_NL_H
 #define PROJECT_NL_H
 
+#include <array>
 #include <algorithm>
 #include <cmath>
 #include <concepts>
@@ -36,5 +37,7 @@
 
 
 #define VM_TEXT(text) U##text
+
+#define u16offsetof(T, M) static_cast<std::uint16_t>(offsetof(T, M))
 
 #endif // PROJECT_NL_H

@@ -16,7 +16,8 @@ using namespace pnl::ll::runtime::execute;
 
 
 VMLib::VMLib(
-    const Path & path) noexcept :
+    const Path & path) noexcept:
+    path{path},
     lib_ref(dlopen(absolute(path).string().c_str(), RTLD_LAZY)){
     if (!lib_ref)
         assert(false, dlerror());
@@ -30,10 +31,9 @@ VMLib::~VMLib() noexcept {
 }
 
 Datapack::Datapack(
-    Map<Path, VMLib> extern_libs,
-    Dict<Package> package_pack) noexcept:
-    extern_libs(std::move(extern_libs)),
-    package_pack(std::move(package_pack)) {
+    MManager* mem) noexcept:
+    extern_libs(mem),
+    package_pack(mem) {
 }
 
 Datapack::Datapack(Datapack &&other) noexcept: extern_libs(std::move(other.extern_libs)),
@@ -41,11 +41,9 @@ Datapack::Datapack(Datapack &&other) noexcept: extern_libs(std::move(other.exter
 }
 
 Datapack & Datapack::operator+=(Datapack &&pack) noexcept {
-    for (auto& [key, val]: pack.extern_libs) {
-        assert(!extern_libs.contains(key), VM_TEXT("duplicate library loading"));
-        extern_libs.emplace(key, std::move(val));
-    }
-
+    for (auto& elem: pack.extern_libs)
+        extern_libs.emplace(std::move(elem));
+    extern_libs.clear();
 
     for (auto& [key, val]: pack.package_pack) {
         assert(!package_pack.contains(key), VM_TEXT("duplicate library loading"));
@@ -53,14 +51,6 @@ Datapack & Datapack::operator+=(Datapack &&pack) noexcept {
     }
 
     return *this;
-}
-
-Datapack Datapack::from_lib(Map<Path, VMLib> extern_libs) noexcept {
-    return {std::move(extern_libs), {}};
-}
-
-Datapack Datapack::from_pkg(Dict<Package> pkgs) noexcept {
-    return {{}, std::move(pkgs)};
 }
 
 
@@ -71,15 +61,16 @@ merge_datapack(
     Dict<VirtualAddress>& named_exports,
     Datapack datapack,
     Str * const err,
-    Map<Path, VMLib>& libraries,
+    Set<Path>& libraries,
     List<Package::Content>& merged_values,
     BiMap<Str, USize>& exports,
     Queue<USize>& base_addr_queue) noexcept {
 
     auto package_pack = Dict<Package>{&process_memory};
+    package_pack = std::move(datapack.package_pack);
 
     libraries = std::move(datapack.extern_libs);
-    package_pack = std::move(datapack.package_pack);
+
 
 
 
@@ -145,9 +136,6 @@ merge_datapack(
         }
     }
 
-
-
-
     return false;
 }
 
@@ -159,7 +147,7 @@ std::optional<Patch> Process::compile_datapack(
     auto base_addr_queue = Queue<USize>{&process_memory};
     auto merged_values = List<Package::Content>{&process_memory};
     auto exports = BiMap<Str, USize>{&process_memory};
-    auto libraries = Map<Path, VMLib>{&process_memory};
+    auto libraries = Set<Path>{&process_memory};
 
     if (merge_datapack(
         process_memory,
@@ -233,7 +221,6 @@ std::optional<Patch> Process::compile_datapack(
         }
         preloaded[idx] = NamedType{
             Type{{named_type_type},
-                std::get<7>(obj).rtt,
                 std::get<7>(obj).size,
             VirtualAddress::from_reserve_offset(
                 exports.at(std::get<7>(obj).maker)
@@ -275,17 +262,17 @@ std::optional<Patch> Process::compile_datapack(
     const auto override_type_type = named_exports.contains(VM_TEXT("::FOverride"))
         ? named_exports.at(VM_TEXT("::FOverride"))
         : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("::FOverride")));
-    const auto override_maker = named_exports.contains(VM_TEXT("::FOverride::()"))
-        ? named_exports.at(VM_TEXT("::FOverride::()"))
-        : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("::FOverride::()")));
-    const auto override_collector = named_exports.contains(VM_TEXT("::FOverride::~()"))
-        ? named_exports.at(VM_TEXT("::FOverride::~()"))
-        : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("::FOverride::~()")));
+    const auto override_inst_cls_maker = named_exports.contains(VM_TEXT("::FOverride::maker"))
+        ? named_exports.at(VM_TEXT("::FOverride::maker"))
+        : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("::FOverride::maker")));
+    const auto override_inst_cls_collector = named_exports.contains(VM_TEXT("::FOverride::collector"))
+        ? named_exports.at(VM_TEXT("::FOverride::collector"))
+        : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("::FOverride::collector")));
 
 
     auto arg_types = Queue<Queue<VirtualAddress>>{&process_memory};
     auto preloaded_override_type = Queue<OverrideType>{&process_memory};
-    auto ntv_funcs = Queue<NtvFunc>{&process_memory};
+    auto ntv_funcs = Queue<NtvId>{&process_memory};
     auto instructions = Queue<Queue<Instruction>>{&process_memory};
     auto preloaded_overrides = Queue<Queue<FOverride>>{&process_memory};
     // compile functions
@@ -349,9 +336,8 @@ std::optional<Patch> Process::compile_datapack(
 
                 preloaded_override_type.emplace(
                     Type{{override_type_type},
-                    true,
                     sizeof(FOverride),
-                    override_maker, override_collector},
+                    override_inst_cls_maker, override_inst_cls_collector},
                     VirtualAddress::from_reserve_offset(arg_types.size()),
                     ret
                 );
@@ -363,24 +349,12 @@ std::optional<Patch> Process::compile_datapack(
 
             auto impl = std::visit([&]<typename T>(T& val) -> std::optional<std::uintptr_t> {
                 if constexpr (std::same_as<T, NtvId>) {
-                    for (auto& lib: libraries
-                                | std::views::values)
-                        if (auto proc_ptr = lib.find_proc(val);
-                            proc_ptr != nullptr) [[unlikely]] {
-                            ntv_funcs.emplace(proc_ptr);
-                            return {reinterpret_cast<std::uintptr_t>(proc_ptr)};
-                        }
-
-                    auto info = build_str(
-                        &process_memory,
-                        VM_TEXT("unable to find native func in any loaded lib: "),
-                        cvt(val)
-                    );
-                    assert(err != nullptr, info);
-                    *err = std::move(info);
-                    return {};
+                    ntv_funcs.emplace(val);
+                    return {0ull};
                 }
                 else {
+                    // ReSharper disable once CppDFAUnreadVariable
+                    // ReSharper disable once CppDFAUnusedValue
                     const auto addr = VirtualAddress::from_reserve_offset(instructions.size());
                     auto insts = Queue<Instruction>{&process_memory};
                     insts.push_range(std::move(val));
@@ -497,27 +471,25 @@ std::optional<Patch> Process::compile_datapack(
         auto members = Queue<MemberInfo>{&process_memory};
         auto methods = Queue<VirtualAddress>{&process_memory};
 
-        auto member_size = Int{0};
-        if (cls.rtt)
-            member_size += sizeof(RTTObject);
+        auto member_size = Long{0};
         for (auto& [mbr_name, mbr_cls_id]: cls.member_list) {
             if (mbr_name.empty()) [[unlikely]] {
                 // find a padding
-                member_size += static_cast<Int>(mbr_cls_id.size());
+                member_size += static_cast<Long>(mbr_cls_id.size());
             }
             else if (exports.contains(mbr_cls_id)) [[likely]] {
                 const auto member_cls_ref = VirtualAddress::from_reserve_offset(exports.at(mbr_cls_id));
                 const auto& member_cls = preloaded.at(exports.at(mbr_cls_id));
-                const Type& mem_tp = (member_cls.index() == 7)
+                const auto& mem_tp = (member_cls.index() == 7)
                     ? std::get<7>(member_cls)
-                    : std::get<10>(member_cls);
+                    : std::get<10>(member_cls).super;
 
                 members.emplace(
                     VirtualAddress::from_reserve_offset(
                         preloaded_strings.size()
                     ), member_cls_ref, member_size);
                 preloaded_strings.emplace(std::move(mbr_name));
-                member_size += mem_tp.instance_size;
+                member_size += mem_tp.super.instance_size;
             }
             else
                 std::unreachable();
@@ -537,10 +509,9 @@ std::optional<Patch> Process::compile_datapack(
 
         preloaded[cls_id] = Class{
             {{{cls_type_addr},
-                cls.rtt,
                 member_size,
-                VirtualAddress::from_reserve_offset(exports.at(cls.method_list[0])),
-                VirtualAddress::from_reserve_offset(exports.at(cls.method_list[1]))},
+                VirtualAddress::from_reserve_offset(exports.at(cls.maker)),
+                VirtualAddress::from_reserve_offset(exports.at(cls.collector))},
             VirtualAddress::from_reserve_offset(preloaded_strings.size())},
             VirtualAddress::from_reserve_offset(preloaded_member_segments.size()),
             VirtualAddress::from_reserve_offset(preloaded_cls_ext_segments.size()),
@@ -680,9 +651,9 @@ std::optional<Patch> Process::compile_datapack(
                 obj.type
             ));
             if (t.index() == 8)
-                size = std::get<NamedType>(t).instance_size;
+                size = std::get<NamedType>(t).super.instance_size;
             else
-                size = std::get<Class>(t).instance_size;
+                size = std::get<Class>(t).super.super.instance_size;
         }
 
         preloaded[obj_id] = LTObject {
@@ -767,7 +738,8 @@ void call_init_function(Thread& thr, const FFamily &family, const std::uint32_t 
 
 
 void Process::load_patch(
-    Patch&& patch
+    Patch&& patch,
+    Str* const err
     ) noexcept {
     auto& thread = main_thread();
 
@@ -778,7 +750,7 @@ void Process::load_patch(
         preloaded_override_type,
         preloaded_arg_types,
         preloaded_instructions,
-        preloaded_ntv_funcs,
+        preloaded_ntv_ids, // todo fix
         preloaded_overrides,
         preloaded_member_segments,
         preloaded_cls_ext_segments,
@@ -791,15 +763,43 @@ void Process::load_patch(
     const auto arr_type_t_addr = named_exports.contains(VM_TEXT("::ArrayType"))
         ? named_exports.at(VM_TEXT("::ArrayType"))
         : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("::ArrayType")));
-    const auto arr_constructor_addr = named_exports.contains(VM_TEXT("::ArrayType::()"))
-        ? named_exports.at(VM_TEXT("::ArrayType::constructor"))
-        : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("::ArrayType::()")));
-    const auto arr_destructor_addr = named_exports.contains(VM_TEXT("::ArrayType::~()"))
+    const auto arr_constructor_addr = named_exports.contains(VM_TEXT("::ArrayType::maker"))
+        ? named_exports.at(VM_TEXT("::ArrayType::maker"))
+        : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("::ArrayType::maker")));
+    const auto arr_destructor_addr = named_exports.contains(VM_TEXT("::ArrayType::collector"))
         ? named_exports.at(VM_TEXT("::ArrayType::destructor"))
-        : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("::ArrayType::~()")));
+        : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("::ArrayType::collector")));
 
 
     auto translate_required = Queue<VirtualAddress>{&process_memory};
+
+    // phase 0 find proc idx
+    auto ntv_procs = Queue<NtvFunc>{&process_memory};
+    while (!preloaded_ntv_ids.empty()) {
+        auto& name = preloaded_ntv_ids.front();
+
+        for (auto& lib: libraries)
+            if (auto proc_ptr = lib.find_proc(name);
+                proc_ptr != nullptr) [[unlikely]] {
+                    ntv_procs.emplace(proc_ptr);
+                    goto noerr;
+                }
+
+        {
+            auto info = build_str(
+                &process_memory,
+                VM_TEXT("unable to find native func in any loaded lib: "),
+                cvt(name)
+            );
+            assert(err != nullptr, info);
+            *err = std::move(info);
+            return;
+        }
+
+        noerr:
+        preloaded_ntv_ids.pop();
+    }
+
 
     // phase - 1 load strings
     VirtualAddress string_base_addr;{
@@ -821,18 +821,17 @@ void Process::load_patch(
                 translate_required.emplace(
                     VirtualAddress::process_page_id,
                     process_page.milestone(),
-                    static_cast<std::uint16_t>(offsetof(ArrayType, type))
+                    u16offsetof(ArrayType, super.super.type)
                 );
                 translate_required.emplace(
                     VirtualAddress::process_page_id,
                     process_page.milestone(),
-                    offsetof(ArrayType, elem_type)
+                    u16offsetof(ArrayType, elem_type)
                 );
                 process_page.emplace_top(
                     TFlag<ArrayType>,
                     Type{{arr_type_t_addr},
-                    true,
-                    static_cast<Int>(sizeof(RTTObject) + sizeof(Char) * str.size()),
+                    static_cast<Long>(sizeof(RTTObject) + sizeof(Char) * str.size()),
                     arr_constructor_addr, arr_destructor_addr},
                     char_addr,
                     static_cast<Long>(str.size())
@@ -857,7 +856,7 @@ void Process::load_patch(
             type_queue.pop();
 
             process_page.placeholder_push(
-                type.instance_size
+                type.super.instance_size
             );
             auto repr = &process_page.ref_top<UByte>();
             *reinterpret_cast<RTTObject*&>(repr) ++ = {type_addr};
@@ -886,18 +885,17 @@ void Process::load_patch(
                     translate_required.emplace(
                         VirtualAddress::process_page_id,
                         process_page.milestone(),
-                        offsetof(ArrayType, type)
+                        u16offsetof(ArrayType, super.super.type)
                     );
                     translate_required.emplace(
                         VirtualAddress::process_page_id,
                         process_page.milestone(),
-                        offsetof(ArrayType, elem_type)
+                        u16offsetof(ArrayType, elem_type)
                     );
                     process_page.emplace_top(
                         TFlag<ArrayType>,
                         Type{{arr_type_t_addr},
-                        true,
-                        static_cast<Int>(sizeof(RTTObject) + sizeof(Instruction) * inst.size()),
+                        static_cast<Long>(sizeof(RTTObject) + sizeof(Instruction) * inst.size()),
                         arr_constructor_addr, arr_destructor_addr},
                         inst_addr,
                         static_cast<Long>(inst.size())
@@ -922,7 +920,7 @@ void Process::load_patch(
                 type_queue.pop();
 
                 process_page.placeholder_push(
-                    type.instance_size
+                    type.super.instance_size
                 );
                 auto repr = &process_page.ref_top<UByte>();
                 *reinterpret_cast<RTTObject*&>(repr) ++ = {type_addr};
@@ -952,18 +950,17 @@ void Process::load_patch(
                         translate_required.emplace(
                             VirtualAddress::process_page_id,
                             process_page.milestone(),
-                            offsetof(ArrayType, type)
+                            u16offsetof(ArrayType, super.super.type)
                         );
                         translate_required.emplace(
                             VirtualAddress::process_page_id,
                             process_page.milestone(),
-                            offsetof(ArrayType, elem_type)
+                            u16offsetof(ArrayType, elem_type)
                         );
                         process_page.emplace_top(
                             TFlag<ArrayType>,
                             Type{{arr_type_t_addr},
-                                true,
-                                static_cast<Int>(sizeof(RTTObject) + sizeof(VirtualAddress) * arg_ts.size()),
+                                static_cast<Long>(sizeof(RTTObject) + sizeof(VirtualAddress) * arg_ts.size()),
                             arr_constructor_addr, arr_destructor_addr},
                             addr_addr,
                             static_cast<Long>(arg_ts.size())
@@ -987,7 +984,7 @@ void Process::load_patch(
                     type_queue.pop();
 
                     const auto milestone = process_page.milestone();
-                    process_page.placeholder_push(type.instance_size);
+                    process_page.placeholder_push(type.super.instance_size);
                     auto repr = &process_page.ref_top<UByte>();
 
                     *reinterpret_cast<RTTObject*&>(repr) ++ = {arr_type_addr};
@@ -1018,18 +1015,17 @@ void Process::load_patch(
                 translate_required.emplace(
                     VirtualAddress::process_page_id,
                     process_page.milestone(),
-                    offsetof(OverrideType, type)
+                    u16offsetof(OverrideType, super.super.type)
                 );
                 translate_required.emplace(
                     VirtualAddress::process_page_id,
                     process_page.milestone(),
-                    offsetof(OverrideType, return_type)
+                    u16offsetof(OverrideType, return_type)
                 );
                 process_page.emplace_top(TFlag<OverrideType>,
                     Type{{override_type_type_addr},
-                        true,
-                        static_cast<Int>(sizeof(FOverride)),
-                    null_addr, null_addr},
+                        static_cast<Long>(sizeof(FOverride)),
+                        null_addr, null_addr},
                     args_base_addr.id_shift(override_type.param_type_array_addr.id()),
                     override_type.return_type
                 );
@@ -1055,19 +1051,18 @@ void Process::load_patch(
                 translate_required.emplace(
                     VirtualAddress::process_page_id,
                     process_page.milestone(),
-                    offsetof(ArrayType, type)
+                    u16offsetof(ArrayType, super.super.type)
                 );
                 translate_required.emplace(
                     VirtualAddress::process_page_id,
                     process_page.milestone(),
-                    offsetof(ArrayType, elem_type)
+                    u16offsetof(ArrayType, elem_type)
                 );
                 process_page.emplace_top(
                     TFlag<ArrayType>,
                     Type{{arr_type_t_addr},
-                        true,
-                        static_cast<Int>(sizeof(RTTObject) + sizeof(FOverride) * override.size()),
-                    null_addr, null_addr},
+                        static_cast<Long>(sizeof(RTTObject) + sizeof(FOverride) * override.size()),
+                        arr_constructor_addr, arr_destructor_addr},
                     override_addr,
                     static_cast<Long>(override.size())
                 );
@@ -1092,7 +1087,7 @@ void Process::load_patch(
             type_queue.pop();
 
             process_page.placeholder_push(
-                type.instance_size
+                type.super.instance_size
             );
             auto repr = &process_page.ref_top<UByte>();
             *reinterpret_cast<RTTObject*&>(repr) ++ = {type_addr};
@@ -1100,9 +1095,13 @@ void Process::load_patch(
                 auto& over = *reinterpret_cast<FOverride*&>(repr) ++;
                 over = override.front();
                 override.pop();
-                over.type = override_type_base_addr.id_shift(over.type.id());
+                over.super.type = override_type_base_addr.id_shift(over.super.type.id());
                 if (!over.is_native)
-                    over.target_addr  = static_cast<std::uint64_t>(instruction_base_addr.id_shift(static_cast<VirtualAddress>(over.target_addr).id()));
+                    over.target_addr = static_cast<std::uint64_t>(instruction_base_addr.id_shift(static_cast<VirtualAddress>(over.target_addr).id()));
+                else {
+                    over.target_addr = reinterpret_cast<std::uintptr_t>(ntv_procs.front());
+                    ntv_procs.pop();
+                }
             }
         }
     }
@@ -1127,18 +1126,17 @@ void Process::load_patch(
                 translate_required.emplace(
                     VirtualAddress::process_page_id,
                     process_page.milestone(),
-                    offsetof(ArrayType, type)
+                    u16offsetof(ArrayType, super.super.type)
                 );
                 translate_required.emplace(
                     VirtualAddress::process_page_id,
                     process_page.milestone(),
-                    offsetof(ArrayType, elem_type)
+                    u16offsetof(ArrayType, elem_type)
                 );
                 process_page.emplace_top(
                     TFlag<ArrayType>,
                     Type{{arr_type_t_addr},
-                        false,
-                        static_cast<Int>(sizeof(RTTObject) + sizeof(MemberInfo) * member.size()),
+                        static_cast<Long>(sizeof(RTTObject) + sizeof(MemberInfo) * member.size()),
                     arr_constructor_addr, arr_destructor_addr},
                     member_info_type_addr,
                     static_cast<Long>(member.size())
@@ -1165,7 +1163,7 @@ void Process::load_patch(
 
             const auto milestone = process_page.milestone();
 
-            process_page.placeholder_push(type.instance_size);
+            process_page.placeholder_push(type.super.instance_size);
 
             auto repr = &process_page.ref_top<UByte>();
             *reinterpret_cast<RTTObject*&>(repr) ++ = {type_addr};
@@ -1174,7 +1172,7 @@ void Process::load_patch(
                 translate_required.emplace(
                     VirtualAddress::process_page_id,
                     milestone,
-                    offset + offsetof(MemberInfo, type)
+                    static_cast<std::uint16_t>(offset + offsetof(MemberInfo, type))
                 );
                 *reinterpret_cast<MemberInfo*&>(repr) ++ = member.front();
                 member.pop();
@@ -1206,8 +1204,7 @@ void Process::load_patch(
                 process_page.emplace_top(
                     TFlag<ArrayType>,
                     Type{{arr_type_t_addr},
-                        true,
-                        static_cast<Int>(sizeof(RTTObject) + sizeof(VirtualAddress) * ext.size()),
+                        static_cast<Long>(sizeof(RTTObject) + sizeof(VirtualAddress) * ext.size()),
                     arr_constructor_addr, arr_destructor_addr},
                     member_info_type_addr,
                     static_cast<Long>(ext.size())
@@ -1233,7 +1230,7 @@ void Process::load_patch(
             type_queue.pop();
 
 
-            process_page.placeholder_push(type.instance_size);
+            process_page.placeholder_push(type.super.instance_size);
 
             auto repr = &process_page.ref_top<UByte>();
             *reinterpret_cast<RTTObject*&>(repr) ++ = {type_addr};
@@ -1274,19 +1271,18 @@ void Process::load_patch(
                 translate_required.emplace(
                     VirtualAddress::process_page_id,
                     process_page.milestone(),
-                    offsetof(ArrayType, type)
+                    u16offsetof(ArrayType, super.super.type)
                 );
                 translate_required.emplace(
                     VirtualAddress::process_page_id,
                     process_page.milestone(),
-                    offsetof(ArrayType, elem_type)
+                    u16offsetof(ArrayType, elem_type)
                 );
                 process_page.emplace_top(
                     TFlag<ArrayType>,
                     Type{{arr_type_t_addr},
-                    true,
-                    static_cast<Int>(sizeof(RTTObject) + sizeof(Char) * len),
-                    arr_constructor_addr, arr_destructor_addr},
+                        static_cast<Long>(sizeof(RTTObject) + sizeof(Char) * len),
+                        arr_constructor_addr, arr_destructor_addr},
                     char_addr,
                     static_cast<Long>(len)
                 );
@@ -1321,14 +1317,13 @@ void Process::load_patch(
                 translate_required.emplace(
                     VirtualAddress::process_page_id,
                     process_page.milestone(),
-                    offsetof(NamedType, type)
+                    u16offsetof(NamedType, super.super.type)
                 );
                 process_page.emplace_top(TFlag<NamedType>, NamedType{
-                    {RTTObject{obj.type},
-                        obj.rtti_support,
-                        obj.instance_size,
-                        base_object_addr.id_shift(obj.maker.id()),
-                        base_object_addr.id_shift(obj.collector.id())},
+                    {   {obj.super.super.type},
+                        obj.super.instance_size,
+                        base_object_addr.id_shift(obj.super.maker.id()),
+                        base_object_addr.id_shift(obj.super.collector.id())},
                     string_base_addr.id_shift(obj.name.id())
                 });
             }
@@ -1344,10 +1339,10 @@ void Process::load_patch(
                 translate_required.emplace(
                     VirtualAddress::process_page_id,
                     process_page.milestone(),
-                    offsetof(FFamily, type)
+                    u16offsetof(FFamily, super.type)
                 );
                 process_page.emplace_top(TFlag<FFamily>, FFamily{
-                    RTTObject{obj.type},
+                    obj.super.type,
                     base_object_addr.id_shift(obj.base_addr.id()) ,
                     override_base_addr.id_shift(obj.overrides.id())
                 });
@@ -1358,14 +1353,13 @@ void Process::load_patch(
                 translate_required.emplace(
                     VirtualAddress::process_page_id,
                     process_page.milestone(),
-                    offsetof(Class, type)
+                    u16offsetof(Class, super.super.super.type)
                 );
                 process_page.emplace_top(TFlag<Class>,
-                    NamedType{{{obj.type},
-                        obj.rtti_support,
-                        obj.instance_size,
+                    NamedType{{obj.super.super.super,
+                        obj.super.super.instance_size,
                         cons, des},
-                    string_base_addr.id_shift(obj.name.id())},
+                    string_base_addr.id_shift(obj.super.name.id())},
                     class_member_addr.id_shift(obj.members.id()),
                     class_ext_addr.id_shift(obj.methods.id()),
                     class_ext_addr.id_shift(obj.static_members.id()),
@@ -1381,7 +1375,7 @@ void Process::load_patch(
             else if constexpr (std::same_as<T, CharArrayRepr>) {
                 const auto tp = str_type.front(); str_type.pop();
                 const auto& t = deref<ArrayType>(tp);
-                process_page.placeholder_push(t.instance_size);
+                process_page.placeholder_push(t.super.instance_size);
                 auto repr = &process_page.ref_top<UByte>();
                 *reinterpret_cast<RTTObject*&>(repr) ++ = {tp};
                 for (const Char ch: obj)
@@ -1412,7 +1406,7 @@ void Process::load_patch(
 
         call_init_function(thread, deref<FFamily>(deref<NamedType>(
             obj.type
-        ).maker), obj.maker_override);
+        ).super.maker), obj.maker_override);
 
         ready_objects.pop();
     }
@@ -1424,6 +1418,6 @@ void Process::load_patch(
             va = base_object_addr.id_shift(va.id());
     }
 
-    for (auto& lib: extern_libs | std::views::values)
+    for (auto& lib: extern_libs)
         libraries.emplace_back(std::move(lib));
 }

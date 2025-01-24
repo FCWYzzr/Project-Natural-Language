@@ -69,6 +69,8 @@ export namespace pnl::ll::inline base {
         using UByte     = unsigned char;
         using BIStream   = std::basic_istream<UByte>;
         using BOStream   = std::basic_ostream<UByte>;
+        using BIFStream   = std::basic_fstream<UByte>;
+        using BOFStream   = std::basic_fstream<UByte>;
 
         using USize     = std::uint64_t;
         using SSize     = std::int64_t;
@@ -102,6 +104,8 @@ export namespace pnl::ll::inline base {
         template<typename T, typename U>
         using Pair = std::pair<T, U>;
 
+        template<std::size_t I>
+        auto& IFlag = std::in_place_index<I>;
         template<typename T>
         auto& TFlag = std::in_place_type<T>;
         template<typename T>
@@ -110,8 +114,6 @@ export namespace pnl::ll::inline base {
         using StrV = std::basic_string_view<Char>;
 
         using NOPType = std::monostate;
-
-
 
 
         using Path = std::filesystem::path;
@@ -154,7 +156,8 @@ export namespace pnl::ll::inline base_traits{
                     or  std::same_as<T, Double>;
 
     template<typename T>
-    concept Trivial  =  std::is_trivially_copy_constructible_v<T>;
+    concept Trivial  =  std::is_trivially_copy_constructible_v<T>
+                        && std::is_standard_layout_v<T>;
 
 }
 
@@ -162,6 +165,8 @@ export namespace pnl::ll::inline codecvt{
     auto ntv_encoding = "UTF-8";
     constexpr auto vm_encoding = "UTF-32LE";
 
+    PNL_LIB_PREFIX
+    Str cvt(const std::string& in, MManager& mem) noexcept;
     PNL_LIB_PREFIX
     Str cvt(const MBStr& in) noexcept;
     PNL_LIB_PREFIX
@@ -439,11 +444,13 @@ export namespace pnl::ll::inline vm{
         }
 
 
+        bool operator==(const Instruction &) const noexcept = default;
         template<std::integral T>
         explicit operator T () = delete;
         template<std::integral T>
         explicit Instruction(T) = delete;
     };
+    static_assert(Trivial<Instruction>);
 
     Instruction operator + (const OPCode rv1, const std::uint32_t rv2) noexcept {
         return Instruction{rv1, rv2};
@@ -451,5 +458,4 @@ export namespace pnl::ll::inline vm{
     Instruction operator ++ (const OPCode rv1, const int) noexcept {
         return Instruction{rv1, 0};
     }
-
 }

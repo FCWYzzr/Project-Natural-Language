@@ -20,7 +20,7 @@ namespace atn {
   class ANTLR4CPP_PUBLIC SerializedATNView final {
   public:
     using value_type = int32_t;
-    using std::size_type = std::size_t;
+    using size_type = std::size_t;
     using difference_type = ptrdiff_t;
     using reference = int32_t&;
     using const_reference = const int32_t&;
@@ -33,7 +33,7 @@ namespace atn {
 
     SerializedATNView() = default;
 
-    SerializedATNView(const_pointer data, std::size_type size) : _data(data), _size(size) {}
+    SerializedATNView(const_pointer data, size_type size) : _data(data), _size(size) {}
 
     SerializedATNView(const std::vector<int32_t> &serializedATN) : _data(serializedATN.data()), _size(serializedATN.size()) {}
 
@@ -61,15 +61,15 @@ namespace atn {
 
     const_pointer data() const { return _data; }
 
-    std::size_type size() const { return _size; }
+    size_type size() const { return _size; }
 
-    std::size_type size_bytes() const { return size() * sizeof(value_type); }
+    size_type size_bytes() const { return size() * sizeof(value_type); }
 
     const_reference operator[](size_type index) const { return _data[index]; }
 
   private:
     const_pointer _data = nullptr;
-    std::size_type _size = 0;
+    size_type _size = 0;
   };
 
   inline bool operator==(const SerializedATNView &lhs, const SerializedATNView &rhs) {

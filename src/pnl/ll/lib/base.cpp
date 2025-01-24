@@ -21,6 +21,10 @@ void pnl::ll::conditions::assert(const bool condition, const MBStr &err_desc) no
 }
 
 
+pnl::ll::Str pnl::ll::codecvt::cvt(const std::string &in, MManager &mem) noexcept {
+    return cvt(MBStr{in.c_str(), &mem});
+}
+
 pnl::ll::Str pnl::ll::codecvt::cvt(const MBStr &in) noexcept {
     auto s = Str{in.get_allocator()};
     s.reserve(in.size()+1);

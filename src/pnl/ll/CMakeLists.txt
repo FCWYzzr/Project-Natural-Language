@@ -101,7 +101,7 @@ add_compile_definitions(
 if (${CMAKE_CXX_PLATFORM_ID} STREQUAL Windows)
     add_subdirectory(nlvm/win32)
 #elseif()
-#   todo
+
 endif ()
 
 install(FILES ${PNL-Lower-Level-interface} DESTINATION "${loc}/module/ll")

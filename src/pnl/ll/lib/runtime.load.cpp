@@ -750,7 +750,7 @@ void Process::load_patch(
         preloaded_override_type,
         preloaded_arg_types,
         preloaded_instructions,
-        preloaded_ntv_ids, // todo fix
+        preloaded_ntv_ids,
         preloaded_overrides,
         preloaded_member_segments,
         preloaded_cls_ext_segments,

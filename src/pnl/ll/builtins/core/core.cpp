@@ -46,14 +46,12 @@ namespace Type {
 
         auto& self = thr.deref<>(type_this_addr);
 
-        const auto rtt_support = std::get<Bool>(thr.take());
         const auto instance_size = std::get<Int>(thr.take());
         const auto maker = std::get<VirtualAddress>(thr.take());
         const auto collector = std::get<VirtualAddress>(thr.take());
 
         new (&self) runtime::Type {
             {type_cls_addr},
-            rtt_support,
             instance_size,
             maker,
             collector
@@ -72,7 +70,6 @@ namespace NamedType {
 
         auto& self = thr.deref<>(n_type_this_addr);
 
-        const auto rtt_support = std::get<Bool>(thr.take());
         const auto instance_size = std::get<Int>(thr.take());
         const auto maker = std::get<VirtualAddress>(thr.take());
         const auto collector = std::get<VirtualAddress>(thr.take());
@@ -80,7 +77,6 @@ namespace NamedType {
 
         new (&self) runtime::NamedType {
                 {{n_type_cls_addr},
-                rtt_support,
                 instance_size,
                 maker,
                 collector},
@@ -100,7 +96,6 @@ namespace ArrayType {
 
         auto& self = thr.deref<runtime::NamedType>(n_type_this_addr);
 
-        const auto rtt_support = std::get<Bool>(thr.take());
         const auto instance_size = std::get<Int>(thr.take());
         const auto maker = std::get<VirtualAddress>(thr.take());
         const auto collector = std::get<VirtualAddress>(thr.take());
@@ -109,7 +104,6 @@ namespace ArrayType {
 
         new (&self) runtime::ArrayType {{
             {n_type_cls_addr},
-            rtt_support,
             instance_size,
             maker,
             collector},
@@ -183,7 +177,6 @@ namespace Class {
 
         auto& self = thr.deref<>(cls_this_addr);
 
-        const auto rtt_support = std::get<Bool>(thr.take());
         const auto instance_size = std::get<Int>(thr.take());
         const auto maker = std::get<VirtualAddress>(thr.take());
         const auto collector = std::get<VirtualAddress>(thr.take());
@@ -197,7 +190,6 @@ namespace Class {
 
         new (&self) runtime::Class {{{{
             cls_cls_addr},
-            rtt_support,
             instance_size,
             maker,
             collector},

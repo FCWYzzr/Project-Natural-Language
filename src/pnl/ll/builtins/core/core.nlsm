@@ -1,0 +1,253 @@
+export invisible class "RTUObject" {}
+
+export invisible class "RTTObject" {
+    .type       "::address"
+}
+
+export class "Type" {
+    .size       "::long"
+    .maker      "::address"
+    .collector  "::address"
+}
+
+export class "NamedType" extends "::Type" {
+    .name       "::address"
+}
+
+export class "Class" extends "::NamedType" {
+    .members         "::address"
+    .methods         "::address"
+    .static_members  "::address"
+    .static_methods  "::address"
+}
+
+export type "unit"    = byte[0]
+export type "bool"    = byte[1]
+export type "byte"    = byte[1]
+export type "char"    = byte[4]
+export type "int"     = byte[4]
+export type "long"    = byte[8]
+export type "float"   = byte[4]
+export type "double"  = byte[8]
+export type "address" = byte[8]
+export type "instruction" = byte[4]
+
+export class "FFamily" extends "::RTTObject" {
+    .base_addr  "::address"
+    .overrides  "::address"
+}
+
+export class "FOverride" extends "::Type" {
+    .param_types    "::address"
+    .return_type    "::address"
+
+    func "maker"
+    func "collector"
+}
+
+export class "ArrayType" extends "::Type" {
+    .element_type   "::address"
+    .length         "::long"
+
+    func "maker"
+    func "collector"
+}
+
+export invisible class "MemberInfo" {
+    .name   "::address"
+    .type   "::address"
+    .offset "::long"
+}
+
+export func {
+    param ["::address"]
+    implement "RTUObject::()"
+} as "RTUObject::()"
+export func {
+    param ["::address"]
+    implement "RTUObject::~()"
+} as "RTUObject::~()"
+
+export func {
+    param ["::address"]
+    implement "RTTObject::()"
+} as "RTTObject::()"
+export func {
+    param ["::address"]
+    implement "RTTObject::~()"
+} as "RTTObject::~()"
+
+export func {
+    param ["::address", "::long", "::address", "::address"]
+    implement "Type::()"
+} as "Type::()"
+export func {
+    param ["::address"]
+    implement "Type::~()"
+} as "Type::~()"
+
+export func {
+    param ["::address", "::address", "::long"]
+    implement "ArrayType::()"
+} as "ArrayType::()"
+export func {
+    param ["::address"]
+    implement "ArrayType::~()"
+} as "ArrayType::~()"
+export func {
+    param ["::address"]
+    implement "ArrayType::maker"
+} as "ArrayType::maker"
+export func {
+    param ["::address"]
+    implement "ArrayType::collector"
+} as "ArrayType::collector"
+
+export func {
+    param ["::address", "::long", "::address", "::address", "::address"]
+    implement "NamedType::()"
+} as "NamedType::()"
+export func {
+    param ["::address"]
+    implement "NamedType::~()"
+} as "NamedType::~()"
+
+export func {
+    param ["::address", "::address", "::address", "::long"]
+    implement "MemberInfo::()"
+} as "MemberInfo::()"
+export func {
+    param ["::address"]
+    implement "MemberInfo::~()"
+} as "MemberInfo::~()"
+
+export func {
+    param ["::address", "::long", "::address", "::address", "::address", "::address", "::address", "::address", "::address"]
+    implement "Class::()"
+} as "Class::()"
+export func {
+    param ["::address"]
+    implement "Class::~()"
+} as "Class::~()"
+
+export func {
+    param ["::address", "::bool", "::address"]
+    implement "FOverride::()"
+} as "FOverride::()"
+
+export func {
+    param ["::address"]
+    implement "FOverride::~()"
+} as "FOverride::~()"
+
+export func {
+    param ["::address", "::address", "::address"]
+    implement "FFamily::()"
+} as "FFamily::()"
+
+export func {
+    param ["::address"]
+    implement "FFamily::~()"
+} as "FFamily::~()"
+
+export func {
+    param ["::address"]
+    implement "unit::()"
+} as "unit::()"
+
+export func {
+    param ["::address"]
+    implement "unit::~()"
+} as "unit::~()"
+
+export func {
+    param ["::address", "::bool"]
+    implement "bool::()"
+} as "bool::()"
+
+export func {
+    param ["::address"]
+    implement "bool::~()"
+} as "bool::~()"
+
+export func {
+    param ["::address", "::byte"]
+    implement "byte::()"
+} as "byte::()"
+
+export func {
+    param ["::address"]
+    implement "byte::~()"
+} as "byte::~()"
+
+export func {
+    param ["::address", "::char"]
+    implement "char::()"
+} as "char::()"
+
+export func {
+    param ["::address"]
+    implement "char::~()"
+} as "char::~()"
+
+export func {
+    param ["::address", "::int"]
+    implement "int::()"
+} as "int::()"
+
+export func {
+    param ["::address"]
+    implement "int::~()"
+} as "int::~()"
+
+export func {
+    param ["::address", "::long"]
+    implement "long::()"
+} as "long::()"
+
+export func {
+    param ["::address"]
+    implement "long::~()"
+} as "long::~()"
+
+export func {
+    param ["::address", "::float"]
+    implement "float::()"
+} as "float::()"
+
+export func {
+    param ["::address"]
+    implement "float::~()"
+} as "float::~()"
+
+export func {
+    param ["::address", "::double"]
+    implement "double::()"
+} as "double::()"
+
+export func {
+    param ["::address"]
+    implement "double::~()"
+} as "double::~()"
+
+export func {
+    param ["::address", "::address"]
+    implement "address::()"
+} as "address::()"
+
+export func {
+    param ["::address"]
+    implement "address::~()"
+} as "address::~()"
+
+export func {
+    param ["::address", "::byte", "::int"]
+    implement "instruction::()"
+} as "instruction::()"
+
+export func {
+    param ["::address"]
+    implement "instruction::~()"
+} as "instruction::~()"
+
+

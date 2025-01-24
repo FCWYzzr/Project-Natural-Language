@@ -102,53 +102,12 @@ static void invoke_override(Thread&, Instruction) noexcept;
 static void instate(Thread&, Instruction) noexcept;
 static void destroy(Thread&) noexcept;
 
-Process::Process(MManager* const upstream, Datapack target, const Path& runtime_path):
+Process::Process(MManager* const upstream):
     process_memory{
         upstream
     }{
     // construct main thread
     threads.emplace_back(this, 0);
-
-    auto mem = &process_memory;
-    // load core
-    auto lib_map = Map<Path, VMLib>{mem};
-    lib_map.emplace(runtime_path / "nlrt_core", VMLib(runtime_path / "nlrt_core"));
-    auto pkg_map = Dict<Package>{mem};
-    pkg_map.emplace(VM_TEXT(""), Package::anonymous_builtin(mem));
-
-    auto datapack = Datapack::from_lib(std::move(lib_map));
-    datapack += Datapack::from_pkg(std::move(pkg_map));
-    auto patch = compile_datapack(std::move(datapack));
-    assert(patch.has_value(), "how did you get here??");
-    load_patch(std::move(patch.value()));
-
-
-
-    lib_map.clear();
-    pkg_map.clear();
-    lib_map.emplace(runtime_path / "nlrt_io", VMLib(runtime_path / "nlrt_io"));
-    pkg_map.emplace(VM_TEXT("io"), Package::io(mem));
-    datapack = Datapack::from_lib(std::move(lib_map));
-    datapack += Datapack::from_pkg(std::move(pkg_map));
-    patch = compile_datapack(std::move(datapack));
-    assert(patch.has_value(), "how did you get here??");
-    load_patch(std::move(patch.value()));
-
-
-
-    Str cache;
-
-    patch = compile_datapack(std::move(target), &cache);
-    assert(patch.has_value(), cache);
-    load_patch(std::move(patch.value()));
-
-
-    assert(named_exports.contains(VM_TEXT("main")), "module not executable(main not found )");
-
-    auto& main = deref<FFamily>(named_exports.at(VM_TEXT("main")));
-    threads[0].call_function(main, 0);
-
-    threads[0].resume();
 }
 
 void Process::pause() const noexcept {
@@ -615,8 +574,8 @@ void wild_new(Thread& thr) noexcept {
     // ReSharper disable once CppDFAUnusedValue
     const auto o_id = std::get<Int>(thr.take());
 
-    thr.eval_stack.emplace(TFlag<VirtualAddress>, thr.process->wild_alloc(tp.instance_size));
-    thr.call_function(thr.deref<FFamily>(tp.maker), o_id);
+    thr.eval_stack.emplace(TFlag<VirtualAddress>, thr.process->wild_alloc(tp.super.super.instance_size));
+    thr.call_function(thr.deref<FFamily>(tp.super.super.maker), o_id);
 }
 
 void wild_collect(Thread& thr) noexcept {
@@ -708,43 +667,43 @@ void NAME(Thread& thr) noexcept {\
             }\
         }
 
-#define OP(v1, v2) (v1 + v2)
+#define OP(v1, v2) ((v1) + (v2))
 BI_VAR_METHOD(add, Int, Long, Float, Double)
 #undef OP
-#define OP(v1, v2) (v1 - v2)
+#define OP(v1, v2) ((v1) - (v2))
 BI_VAR_METHOD(sub, Int, Long, Float, Double)
 #undef OP
-#define OP(v1, v2) (v1 * v2)
+#define OP(v1, v2) ((v1) * (v2))
 BI_VAR_METHOD(mul, Int, Long, Float, Double)
 #undef OP
-#define OP(v1, v2) (v1 / v2)
+#define OP(v1, v2) ((v1) / (v2))
 BI_VAR_METHOD(div, Int, Long, Float, Double)
 #undef OP
-#define OP(v1, v2) (v1 % v2)
+#define OP(v1, v2) ((v1) % (v2))
 BI_VAR_METHOD(rem, Int, Long)
 #undef OP
-#define OP(v) (-v)
+#define OP(v) (-(v))
 UNI_VAR_METHOD(neg, Int, Long)
 #undef OP
-#define OP(v1, v2) (v1 << v2)
+#define OP(v1, v2) ((v1) << (v2))
 BI_VAR_METHOD(shl, Int, Long)
 #undef OP
-#define OP(v1, v2) (v1 >> v2)
+#define OP(v1, v2) ((v1) >> (v2))
 BI_VAR_METHOD(shr, Int, Long)
 #undef OP
 #define OP(v1, v2) (::ushr(v1, v2))
 BI_VAR_METHOD(ushr, Bool, Int, Long)
 #undef OP
-#define OP(v1, v2) (v1 & v2)
+#define OP(v1, v2) ((v1) & (v2))
 BI_VAR_METHOD(bit_and, Bool, Int, Long)
 #undef OP
-#define OP(v1, v2) (v1 | v2)
+#define OP(v1, v2) ((v1) | (v2))
 BI_VAR_METHOD(bit_or, Bool, Int, Long)
 #undef OP
-#define OP(v1, v2) (v1 ^ v2)
+#define OP(v1, v2) ((v1) ^ (v2))
 BI_VAR_METHOD(bit_xor, Bool, Int, Long)
 #undef OP
-#define OP(v) (~v)
+#define OP(v) (~(v))
 UNI_VAR_METHOD(bit_inv, Int, Long)
 #undef OP
 
@@ -838,12 +797,12 @@ void instate(Thread& thr, const Instruction inst) noexcept {
     const auto& cls = thr.deref<Class>(std::get<VirtualAddress>(
         thr.take()
     ));
-    thr.call_function(thr.deref<FFamily>(cls.maker), inst.arg());
+    thr.call_function(thr.deref<FFamily>(cls.super.super.maker), inst.arg());
 }
 
 void destroy(Thread& thr) noexcept {
     const auto& cls = vm__top_obj_type(thr);
-    thr.call_function(thr.deref<FFamily>(cls.collector), 0);
+    thr.call_function(thr.deref<FFamily>(cls.super.super.collector), 0);
 }
 
 

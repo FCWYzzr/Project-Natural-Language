@@ -3,7 +3,7 @@ grammar nlsm;
 import opcode;
 
 EMPTY
-    : [ \r\b\t\n] -> skip
+    : [ \r\b\t\n]+ -> skip
     ;
 
 EXPORT
@@ -79,45 +79,56 @@ CHAR
 STRING
     : '"' SChar* '"'
     ;
-
-POSITIVE_DECIMAL
-    : '0'
-    | [1-9] [0-9]*
+PADDING
+    : '_' +
     ;
 
+
 DECIMAL
-    : POSITIVE_DECIMAL
+    : '0'
     | '-'? [1-9] [0-9]*
     ;
 
 FLOATING
-    : '-'? POSITIVE_DECIMAL '.' POSITIVE_DECIMAL
+    : '-'? DECIMAL '.' DECIMAL
     ;
 
 FIELD_NAME
-    : '.' ~[./\\:]+
+    : '.' ~[ ./\\:"'@]+
     ;
 
 STATIC
     : 'static'
     ;
-
 INSTATE
     : 'instate'
     ;
-
 AT
     : '@'
     ;
+PARAM
+    : 'param'
+    ;
+IMPLEMENT
+    : 'implement'
+    ;
+INVISIBLE
+    : 'invisible'
+    ;
+EXTENDS
+    : 'extends'
+    ;
+COMMA
+    : ','
+    ;
 
 fragment SChar
-    : ~["brtn\\]
+    : ~["\\]
     | '\\' ["brtn\\]
     ;
 
-
 package options{root=true;}
-    : package_content +
+    : (package_content COMMA?) +
     ;
 
 package_content
@@ -183,7 +194,7 @@ char_array_value
 // type "unit" = byte[0]
 // autogen unit::() & unit::~()
 named_type_value
-    : NamedType STRING EQ BYTE LBK POSITIVE_DECIMAL RBK
+    : NamedType STRING EQ BYTE LBK DECIMAL RBK
     ;
 
 // func "write" [
@@ -195,31 +206,40 @@ named_type_value
 //     ...
 // ]
 function_value
-    : FUNC STRING LBK override_value+ RBK
-    | FUNC STRING override_value
+    : FUNC LBK (override_value COMMA?)+ RBK
+    | FUNC override_value
     ;
 
 override_value
     : LB
-         PARAM LBK STRING* RBK
-         RETURN STRING
-         IMPLEMENT LBK command+ RBK
-      RB
-    | LB
-         PARAM LBK STRING* RBK
-         RETURN STRING
-         IMPLEMENT STRING
+         (PARAM params)?
+         (RETURN ret)?
+         IMPLEMENT ((LBK command+ RBK) | STRING)
       RB
     ;
 
-// class "class" {
+params
+    : LBK (STRING COMMA?)* RBK
+    ;
+ret
+    : STRING
+    ;
+
+// class "Class" extends "::NamedType" {
 //      .members "::address"
 //      .methods "::address"
 //      .static_members "::address"
 //      .static_methods "::address"
 // }
+
+
+
 class_value
-    : CLASS STRING LB class_content+ RB
+    : CLASS STRING super? LB class_content* RB
+    | INVISIBLE CLASS STRING LB class_content* RB
+    ;
+super
+    : EXTENDS STRING
     ;
 
 class_content
@@ -231,10 +251,11 @@ class_content
 
 member
     : FIELD_NAME STRING
+    | PADDING
     ;
 
 method
-    : FIELD_NAME EQ FUNC STRING
+    : FUNC STRING
     ;
 
 s_member
@@ -242,11 +263,11 @@ s_member
     ;
 
 s_method
-    : STATIC FIELD_NAME EQ FUNC STRING
+    : STATIC FUNC STRING
     ;
 
 object_value
-    : INSTATE CLASS STRING AT DECIMAL LB instant_value RB
+    : INSTATE CLASS STRING (AT DECIMAL)? LB instant_value* RB
     ;
 
 instant_value

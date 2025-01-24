@@ -51,6 +51,9 @@ export namespace pnl::ll::inline comtime{
             ObjRefRepr&,
             ImplRepr&
         >;
+        bool operator==(const FOverrideRepr &o) const noexcept {
+            return arg_ts == o.arg_ts && ret_t == o.ret_t && impl == o.impl;
+        }
 
         // ReSharper disable once CppNonExplicitConversionOperator
         operator Delegated () {
@@ -65,7 +68,8 @@ export namespace pnl::ll::inline comtime{
 
     struct PNL_LIB_PREFIX ClassRepr{
         Str name;
-        bool rtt;
+        ObjRefRepr maker;
+        ObjRefRepr collector;
         // name -> type
         List<Pair<Str, ObjRefRepr>>
             member_list;
@@ -78,15 +82,18 @@ export namespace pnl::ll::inline comtime{
             static_method_list;
 
 
-        ClassRepr(Str name, const bool rtt, List<Pair<Str, ObjRefRepr>> member_list, List<ObjRefRepr> method_list,
-            List<ObjRefRepr> static_member_list, List<ObjRefRepr> static_method_list)
+        ClassRepr(Str name, ObjRefRepr maker, ObjRefRepr collector, List<Pair<Str, ObjRefRepr>> member_list,
+            List<ObjRefRepr> method_list, List<ObjRefRepr> static_member_list, List<ObjRefRepr> static_method_list)
             noexcept: name(std::move(name)),
-              rtt(rtt),
+              maker(std::move(maker)),
+              collector(std::move(collector)),
               member_list(std::move(member_list)),
               method_list(std::move(method_list)),
               static_member_list(std::move(static_member_list)),
               static_method_list(std::move(static_method_list)) {
         }
+
+        bool operator==(const ClassRepr &) const noexcept = default;
 
         using Delegated = std::tuple<
             List<Pair<Str, ObjRefRepr>>&,
@@ -100,22 +107,22 @@ export namespace pnl::ll::inline comtime{
 
     struct PNL_LIB_PREFIX NamedTypeRepr {
         Str name;
-        bool rtt;
-        Int size;
+        Long size;
         ObjRefRepr maker;
         ObjRefRepr collector;
 
         using Delegated = std::tuple<
             Str&,
-            bool&,
-            Int&,
+            Long&,
             ObjRefRepr&,
             ObjRefRepr&
         >;
 
+        bool operator==(const NamedTypeRepr &) const noexcept = default;
+
         // ReSharper disable once CppNonExplicitConversionOperator
         operator Delegated () noexcept {
-            return std::tie(name, rtt, size, maker, collector);
+            return std::tie(name, size, maker, collector);
         }
     };
 
@@ -126,6 +133,8 @@ export namespace pnl::ll::inline comtime{
             constructor_override_id;
         List<CTValue>
             constructor_params;
+
+        bool operator==(const ObjectRepr &) const noexcept = default;
 
         using Delegated = std::tuple<ObjRefRepr&, USize&, List<CTValue>&>;
 
@@ -156,35 +165,20 @@ export namespace pnl::ll::inline comtime{
 
         Package(
             List<Content> data,
-            Map<USize, ObjRefRepr> exports) noexcept:
-            data(std::move(data)),
-            exports(std::move(exports)){}
-
+            Map<USize, ObjRefRepr> exports) noexcept;
 
 
         Package(const Package &other) noexcept = default;
 
-        Package(Package &&other) noexcept:
-            data(std::move(other.data)),
-            exports(std::move(other.exports))
-        {}
+        Package(Package &&other) noexcept;
 
 
-        Package & operator=(const Package &other) noexcept{
-            if (this == &other)
-                return *this;
-            data = other.data;
-            exports = other.exports;
-            return *this;
-        }
+        Package & operator=(const Package &other) noexcept;
 
-        Package & operator=(Package &&other) noexcept {
-            if (this == &other)
-                return *this;
-            data = std::move(other.data);
-            exports = std::move(other.exports);
-            return *this;
-        }
+        Package & operator=(Package &&other) noexcept;
+
+        // for package equivalant check
+        bool operator == (const Package &) const noexcept = default;
 
 
         using Delegated = std::tuple<List<Content>&, Map<USize, ObjRefRepr>&>;

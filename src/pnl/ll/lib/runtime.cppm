@@ -99,17 +99,14 @@ export namespace pnl::ll::inline runtime{
         explicit operator std::uint64_t() const noexcept {
             return content;
         }
-
     };
     constexpr VirtualAddress null_addr;
     struct FuncContext;
 
     using NtvFunc   = void(*)(Thread&);
     struct PNL_LIB_PREFIX VMLib {
+        std::filesystem::path path;
         void*   lib_ref;
-
-        explicit VMLib(void* lib_ref=nullptr) noexcept:
-            lib_ref{lib_ref} {}
 
         explicit VMLib(
             const Path& path
@@ -142,7 +139,6 @@ export namespace pnl::ll::inline runtime{
     }
 
     inline namespace execute {
-        struct RTUObject;
         struct RTTObject;
         struct Type;
         struct NamedType;
@@ -163,9 +159,6 @@ export namespace pnl::ll::inline runtime{
 
 export namespace pnl::ll::runtime::execute {
     // everything is trivially copiable
-    struct alignas(Long) RTUObject {};
-    static_assert(Trivial<RTUObject>);
-
 
     struct alignas(Long) RTTObject{
         // refer to a type
@@ -185,10 +178,10 @@ export namespace pnl::ll::runtime::execute {
     };
     static_assert(Trivial<MemberInfo>);
 
-    struct alignas(Long) Type: RTTObject {
-        Bool
-            rtti_support;
-        Int
+    struct alignas(Long) Type {
+        RTTObject
+            super;
+        Long
             instance_size;
         VirtualAddress
             maker;
@@ -198,7 +191,9 @@ export namespace pnl::ll::runtime::execute {
     static_assert(Trivial<Type>);
 
 
-    struct alignas(Long) NamedType: Type {
+    struct alignas(Long) NamedType {
+        Type
+            super;
         // refer to a string
         VirtualAddress
             name;
@@ -206,7 +201,9 @@ export namespace pnl::ll::runtime::execute {
     static_assert(Trivial<NamedType>);
 
 
-    struct alignas(Long) Class: NamedType {
+    struct alignas(Long) Class {
+        NamedType
+            super;
 
         // refer to an array of member info
         VirtualAddress
@@ -228,7 +225,9 @@ export namespace pnl::ll::runtime::execute {
     static_assert(Trivial<Class>);
 
 
-    struct alignas(Long) ArrayType: Type {
+    struct alignas(Long) ArrayType {
+        Type
+            super;
         VirtualAddress
             elem_type;
         Long
@@ -237,7 +236,9 @@ export namespace pnl::ll::runtime::execute {
     static_assert(Trivial<ArrayType>);
 
     template<typename T>
-    struct alignas(Long) Array: RTTObject{
+    struct alignas(Long) Array{
+        RTTObject
+            super;
         // Array should only use by reinterpret cast
         Array()=delete;
         // we already alloc & init enough elements, so normally no UB may exist here
@@ -258,7 +259,9 @@ export namespace pnl::ll::runtime::execute {
 
 
     // auto erasable type type
-    struct alignas(Long) OverrideType: Type {
+    struct alignas(Long) OverrideType {
+        Type
+            super;
         VirtualAddress
             param_type_array_addr;
         VirtualAddress
@@ -267,7 +270,9 @@ export namespace pnl::ll::runtime::execute {
     static_assert(Trivial<OverrideType>);
 
 
-    struct PNL_LIB_PREFIX alignas(Long) FOverride: RTTObject {
+    struct PNL_LIB_PREFIX alignas(Long) FOverride {
+        RTTObject
+            super;
         bool is_native;
         // if native, refer to NtvFunc
         // else, refer to Instruction[]
@@ -283,7 +288,9 @@ export namespace pnl::ll::runtime::execute {
     static_assert(Trivial<FOverride>);
 
 
-    struct alignas(Long) FFamily: RTTObject {
+    struct alignas(Long) FFamily {
+        RTTObject
+            super;
         // base addr ptr
         VirtualAddress
             base_addr;
@@ -292,6 +299,7 @@ export namespace pnl::ll::runtime::execute {
         VirtualAddress
             overrides;
     };
+
     static_assert(Trivial<FFamily>);
 
 }
@@ -312,12 +320,12 @@ export namespace pnl::ll::runtime::load {
 
     // merged service pack
     struct PNL_LIB_PREFIX Datapack {
-        Map<Path, VMLib>
+        Set<Path>
                 extern_libs;
         Dict<Package>
                 package_pack;
 
-        Datapack(Map<Path, VMLib> extern_libs, Dict<Package> package_pack) noexcept;
+        explicit Datapack(MManager* mem) noexcept;
 
         Datapack(Datapack &&other) noexcept;
 
@@ -332,11 +340,15 @@ export namespace pnl::ll::runtime::load {
 
         Datapack& operator += (Datapack&& pack) noexcept;
 
-        static Datapack
-            from_lib(Map<Path, VMLib> extern_libs) noexcept;
+        Datapack& add_lib(Path path) noexcept {
+            extern_libs.emplace(std::move(path));
+            return *this;
+        }
 
-        static Datapack
-            from_pkg(Dict<Package> pkgs) noexcept;
+        Datapack& add_pkg(Str name, Package pkg) noexcept {
+            package_pack.emplace(std::move(name), std::move(pkg));
+            return *this;
+        }
     };
 
     struct PNL_LIB_PREFIX LTObject {
@@ -360,7 +372,7 @@ export namespace pnl::ll::runtime::load {
 
     // compiled patch for process
     struct PNL_LIB_PREFIX Patch {
-        Map<Path, VMLib>
+        Set<Path>
             extern_libs;
 
         Queue<Str>
@@ -372,7 +384,7 @@ export namespace pnl::ll::runtime::load {
             arg_types;
         Queue<Queue<Instruction>>
             instructions;
-        Queue<NtvFunc>
+        Queue<NtvId>
             ntv_funcs;
         Queue<Queue<FOverride>>
             preloaded_overrides;
@@ -396,8 +408,8 @@ export namespace pnl::ll::runtime::load {
         Queue<USize>
             preloaded_str_len;
 
-        Patch(Map<Path, VMLib> extern_libs, Queue<Str> preloaded_strings, Queue<OverrideType> preloaded_override_type,
-            Queue<Queue<VirtualAddress>> arg_types, Queue<Queue<Instruction>> instructions, Queue<NtvFunc> ntv_funcs,
+        Patch(Set<Path> extern_libs, Queue<Str> preloaded_strings, Queue<OverrideType> preloaded_override_type,
+            Queue<Queue<VirtualAddress>> arg_types, Queue<Queue<Instruction>> instructions, Queue<NtvId> ntv_funcs,
             Queue<Queue<FOverride>> preloaded_overrides, Queue<Queue<MemberInfo>> preloaded_member_segments,
             Queue<Queue<VirtualAddress>> preloaded_cls_ext_segments, Queue<LTValue> preloaded,
             BiMap<Str, USize> exports, Stack<Value> preloaded_params, Queue<USize> preloaded_str_len)
@@ -449,6 +461,41 @@ export namespace pnl::ll::runtime::load {
             preloaded_params = std::move(other.preloaded_params);
             preloaded_str_len = std::move(other.preloaded_str_len);
             return *this;
+        }
+
+        using Delegated = Tuple<
+            Set<Path>&,
+            Queue<Str>&,
+            Queue<OverrideType>&,
+            Queue<Queue<VirtualAddress>>&,
+            Queue<Queue<Instruction>>&,
+            Queue<NtvId>&,
+            Queue<Queue<FOverride>>&,
+            Queue<Queue<MemberInfo>>&,
+            Queue<Queue<VirtualAddress>>&,
+            Queue<LTValue>&,
+            BiMap<Str, USize>&,
+            Stack<Value>&,
+            Queue<USize>&
+        >;
+
+        // ReSharper disable once CppNonExplicitConversionOperator
+        operator Delegated () noexcept {
+            return std::tie(
+            extern_libs,
+            preloaded_strings,
+            preloaded_override_type,
+            arg_types,
+            instructions,
+            ntv_funcs,
+            preloaded_overrides,
+            preloaded_member_segments,
+            preloaded_cls_ext_segments,
+            preloaded,
+            exports,
+            preloaded_params,
+            preloaded_str_len
+            );
         }
     };
 
@@ -532,7 +579,7 @@ export namespace pnl::ll::runtime {
             }
         }
 
-        ~Thread() noexcept {
+        ~Thread() noexcept { // NOLINT(*-use-equals-default)
             terminate();
         }
 
@@ -587,7 +634,7 @@ export namespace pnl::ll::runtime {
         Dict<VirtualAddress>
                             named_exports{&process_memory};
 
-        explicit Process(MManager*, Datapack, const Path&);
+        explicit Process(MManager*);
         ~Process() noexcept { // NOLINT(*-use-equals-default)
             for (auto& thr: threads)
                 thr.terminate();
@@ -624,7 +671,7 @@ export namespace pnl::ll::runtime {
 
 
 
-        void load_patch(Patch&&) noexcept;
+        void load_patch(Patch&&, Str*) noexcept;
     };
 }
 
@@ -636,7 +683,7 @@ T & Thread::deref(const VirtualAddress &vr) noexcept {
 
 template<typename T>
 ListV<T> Array<T>::view(Process &proc) noexcept {
-    const auto& arr_t = proc.deref<ArrayType>(type);
+    const auto& arr_t = proc.deref<ArrayType>(super.type);
     const auto beg = &(*this)[0];
     const auto end = &(*this)[arr_t.length];
     return ListV<T>(beg, end);
@@ -644,7 +691,7 @@ ListV<T> Array<T>::view(Process &proc) noexcept {
 
 template<typename T>
 ListV<const T> Array<T>::view(Process &proc) const noexcept {
-    const auto& arr_t = proc.deref<ArrayType>(type);
+    const auto& arr_t = proc.deref<ArrayType>(super.type);
     const auto beg = &(*this)[0];
     const auto end = &(*this)[arr_t.length];
     return ListV<const T>(beg, end);

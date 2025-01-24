@@ -28,7 +28,7 @@ target_link_libraries(nl-ll
     ${libiconv}
 )
 target_include_directories(nl-ll PUBLIC
-    ${PNL-header}
+    ${PNL-Include}
     ${dlfcn-headers}
     ${libiconv-headers}
 )
@@ -50,7 +50,7 @@ add_executable(nlsm
 )
 target_include_directories(nlsm PUBLIC
     nlsm/antlr_gen
-    ${PNL-header}
+    ${PNL-Include}
     ${dlfcn-headers}
     ${libiconv-headers}
     ${antlr4-headers}
@@ -64,33 +64,48 @@ target_compile_definitions(nlsm PUBLIC
 )
 
 
-file(GLOB_RECURSE nlvm-src
-    nlvm/*.cpp
-    nlvm/*.cppm
+file(GLOB_RECURSE nlim-src
+    nlim/*.cpp
+    nlim/*.cppm
 )
-add_executable(nlvm
-    ${nlvm-src}
+add_executable(nlim
+    ${nlim-src}
     ${PNL-Lower-Level-interface}
 )
-target_include_directories(nlvm PUBLIC
-    ${PNL-header}
+target_include_directories(nlim PUBLIC
+    ${PNL-Include}
+    ${dlfcn-headers}
+    ${libiconv-headers}
+    ${antlr4-headers}
 )
-target_link_libraries(nlvm
+target_link_libraries(nlim
     nl-ll
+    ${antlr4}
 )
-target_compile_definitions(nlsm PUBLIC
+target_compile_definitions(nlim PUBLIC
     "PNL_LIB_PREFIX=${IMPORT}"
 )
 
 
-
-add_compile_definitions(
-    ASM_EXT=L".nlsm"
-    PKG_EXT=L".nlpkg"
-    IMG_EXT=L".nlimg"
+file(GLOB_RECURSE nlvm-common-src
+    nlvm/common/*.cpp
+    nlvm/common/*.cppm
 )
 
+add_compile_definitions(
+    ASM_EXT=".nlsm"
+    PKG_EXT=".nlpkg"
+    IMG_EXT=".nlimg"
+)
+
+if (${CMAKE_CXX_PLATFORM_ID} STREQUAL Windows)
+    add_subdirectory(nlvm/win32)
+#elseif()
+
+endif ()
+
 install(FILES ${PNL-Lower-Level-interface} DESTINATION "${loc}/module/ll")
-install(TARGETS nl-ll DESTINATION "${loc}/bin")
+install(TARGETS nl-ll
+    RUNTIME DESTINATION "${loc}/bin"
+    LIBRARY DESTINATION "${loc}/lib")
 install(TARGETS nlsm DESTINATION "${loc}/bin")
-install(TARGETS nlvm DESTINATION "${loc}/bin")

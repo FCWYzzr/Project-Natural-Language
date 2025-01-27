@@ -1,0 +1,6 @@
+export long 0 as "MB_OK"
+export func {
+    param ["core::address", "core::address", "core::long"]
+    return "core::int"
+    implement "win32::MessageBox::0"
+} as "MessageBox"

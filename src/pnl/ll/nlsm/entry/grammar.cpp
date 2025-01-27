@@ -22,7 +22,7 @@ using namespace std::ranges;
 
 struct NLSMBuilder final : nlsmBaseVisitor {
     using Repr = Pair<std::optional<Str>, Package::Content>;
-    using ClsMemSlot = Pair<Int, std::variant<Pair<Str, ObjRefRepr>, ObjRefRepr>>;
+    using ClsMemSlot = Pair<Int, std::variant<Pair<Str, ReferenceRepr>, ReferenceRepr>>;
     MManager* const mem;
     const Str prefix;
     Str cur_cls;
@@ -32,7 +32,7 @@ struct NLSMBuilder final : nlsmBaseVisitor {
 
     std::any visitPackage(nlsmParser::PackageContext *ctx) override {
         auto data = List<Package::Content>{mem};
-        auto exports = Map<USize, ObjRefRepr>{mem};
+        auto exports = Map<USize, ReferenceRepr>{mem};
 
         for (auto idx = 0;
             const auto content_ctx:
@@ -147,7 +147,7 @@ struct NLSMBuilder final : nlsmBaseVisitor {
 
     std::any visitReference_value(nlsmParser::Reference_valueContext *ctx) override {
         const auto parsed = cvt(ctx->STRING()->getText(), *mem);
-        return {Package::Content{TFlag<CharArrayRepr>, parsed.substr(1, parsed.length() - 2)}};
+        return {Package::Content{TFlag<ReferenceRepr>, ReferenceRepr{parsed.substr(1, parsed.length() - 2)}}};
     }
 
     std::any visitChar_array_value(nlsmParser::Char_array_valueContext *ctx) override {
@@ -180,8 +180,8 @@ struct NLSMBuilder final : nlsmBaseVisitor {
     }
 
     std::any visitOverride_value(nlsmParser::Override_valueContext *ctx) override {
-        auto param = std::any_cast<List<ObjRefRepr>>(visitParams(ctx->params()));
-        auto ret = std::any_cast<ObjRefRepr>(visitRet(ctx->ret()));
+        auto param = std::any_cast<List<ReferenceRepr>>(visitParams(ctx->params()));
+        auto ret = std::any_cast<ReferenceRepr>(visitRet(ctx->ret()));
         if (ctx->STRING() != nullptr) {
             const auto id = ctx->STRING()->getText();
             return {FOverrideRepr{
@@ -208,7 +208,7 @@ struct NLSMBuilder final : nlsmBaseVisitor {
 
     }
     std::any visitParams(nlsmParser::ParamsContext *context) override {
-        auto param = List<ObjRefRepr>{mem};
+        auto param = List<ReferenceRepr>{mem};
         if (context != nullptr)
             for (const auto tp: context->STRING()) {
                 const auto quoted = cvt(tp->getText(), *mem);
@@ -219,9 +219,9 @@ struct NLSMBuilder final : nlsmBaseVisitor {
 
     std::any visitRet(nlsmParser::RetContext *context) override {
         if (context == nullptr)
-            return {Str{VM_TEXT("::unit"), mem}};
+            return {ReferenceRepr{{VM_TEXT("core::unit"), mem}}};
         const auto name = cvt(context->STRING()->getText(), *mem);
-        return {name.substr(1, name.size() - 2)};
+        return {ReferenceRepr{name.substr(1, name.size() - 2)}};
     }
 
     std::any visitClass_value(nlsmParser::Class_valueContext *ctx) override {
@@ -230,15 +230,15 @@ struct NLSMBuilder final : nlsmBaseVisitor {
         cur_cls = (prefix + name) += VM_TEXT("::");
         auto maker = cur_cls + VM_TEXT("()");
         auto collector = cur_cls + VM_TEXT("~()");
-        auto members = List<Pair<Str, ObjRefRepr>>{mem};
-        auto methods = List<ObjRefRepr>{mem};
-        auto s_members = List<ObjRefRepr>{mem};
-        auto s_methods = List<ObjRefRepr>{mem};
+        auto members = List<Pair<Str, ReferenceRepr>>{mem};
+        auto methods = List<ReferenceRepr>{mem};
+        auto s_members = List<ReferenceRepr>{mem};
+        auto s_methods = List<ReferenceRepr>{mem};
 
         if (ctx->super() != nullptr)
-            members.emplace_back(VM_TEXT("__super"), std::any_cast<ObjRefRepr>(visitSuper(ctx->super())));
+            members.emplace_back(VM_TEXT("__super"), std::any_cast<ReferenceRepr>(visitSuper(ctx->super())));
         else if (ctx->INVISIBLE() == nullptr)
-            members.emplace_back(VM_TEXT("__super"), VM_TEXT("::RTTObject"));
+            members.emplace_back(VM_TEXT("__super"), VM_TEXT("core::RTTObject"));
 
         for (const auto mbr: ctx->class_content())
             switch (auto [idx, v] = std::any_cast<ClsMemSlot>(visitClass_content(mbr));
@@ -272,18 +272,18 @@ struct NLSMBuilder final : nlsmBaseVisitor {
 
     std::any visitSuper(nlsmParser::SuperContext *context) override {
         const auto name = cvt(context->STRING()->getText(), *mem);
-        return {name.substr(1, name.size() - 2)};
+        return {ReferenceRepr{name.substr(1, name.size() - 2)}};
     }
 
     std::any visitClass_content(nlsmParser::Class_contentContext *ctx) override {
         if (ctx->member() != nullptr)
-            return ClsMemSlot{0, std::variant<Pair<Str, ObjRefRepr>, ObjRefRepr>{TFlag<Pair<Str, ObjRefRepr>>, std::any_cast<Pair<Str, ObjRefRepr>>(visitMember(ctx->member()))}};
+            return ClsMemSlot{0, std::variant<Pair<Str, ReferenceRepr>, ReferenceRepr>{TFlag<Pair<Str, ReferenceRepr>>, std::any_cast<Pair<Str, ReferenceRepr>>(visitMember(ctx->member()))}};
         if (ctx->method() != nullptr)
-            return ClsMemSlot{1, std::variant<Pair<Str, ObjRefRepr>, ObjRefRepr>{TFlag<ObjRefRepr>, std::any_cast<ObjRefRepr>(visitMethod(ctx->method()))}};
+            return ClsMemSlot{1, std::variant<Pair<Str, ReferenceRepr>, ReferenceRepr>{TFlag<ReferenceRepr>, std::any_cast<ReferenceRepr>(visitMethod(ctx->method()))}};
         if (ctx->s_member() != nullptr)
-            return ClsMemSlot{2, std::variant<Pair<Str, ObjRefRepr>, ObjRefRepr>{TFlag<ObjRefRepr>, std::any_cast<ObjRefRepr>((visitS_member(ctx->s_member())))}};
+            return ClsMemSlot{2, std::variant<Pair<Str, ReferenceRepr>, ReferenceRepr>{TFlag<ReferenceRepr>, std::any_cast<ReferenceRepr>((visitS_member(ctx->s_member())))}};
         if (ctx->s_method() != nullptr)
-            return ClsMemSlot{3, std::variant<Pair<Str, ObjRefRepr>, ObjRefRepr>{TFlag<ObjRefRepr>, std::any_cast<ObjRefRepr>(visitS_method(ctx->s_method()))}};
+            return ClsMemSlot{3, std::variant<Pair<Str, ReferenceRepr>, ReferenceRepr>{TFlag<ReferenceRepr>, std::any_cast<ReferenceRepr>(visitS_method(ctx->s_method()))}};
         std::unreachable();
     }
 
@@ -291,22 +291,22 @@ struct NLSMBuilder final : nlsmBaseVisitor {
         if (ctx -> PADDING() != nullptr)
             return {Pair{Str{mem}, cvt(ctx -> PADDING()->getText(), *mem)}};
         const auto tp = cvt(ctx->STRING()->getText(), *mem);
-        return {Pair{cvt(ctx -> FIELD_NAME()->getText(), *mem).substr(1), tp.substr(1, tp.size() - 2)}};
+        return {Pair{cvt(ctx -> FIELD_NAME()->getText(), *mem).substr(1), ReferenceRepr{tp.substr(1, tp.size() - 2)}}};
     }
 
     std::any visitMethod(nlsmParser::MethodContext *ctx) override {
         const auto link = cvt(ctx->STRING()->getText(), *mem);
-        return {cur_cls + link.substr(1, link.size() - 2)};
+        return ReferenceRepr{cur_cls + link.substr(1, link.size() - 2)};
     }
 
     std::any visitS_member(nlsmParser::S_memberContext *ctx) override {
         const auto link = cvt(ctx->STRING()->getText(), *mem);
-        return {cur_cls + link.substr(1, link.size() - 2)};
+        return ReferenceRepr{cur_cls + link.substr(1, link.size() - 2)};
     }
 
     std::any visitS_method(nlsmParser::S_methodContext *ctx) override {
         const auto link = cvt(ctx->STRING()->getText(), *mem);
-        return {cur_cls + link.substr(1, link.size() - 2)};
+        return ReferenceRepr{cur_cls + link.substr(1, link.size() - 2)};
     }
 
     std::any visitObject_value(nlsmParser::Object_valueContext *ctx) override {
@@ -336,7 +336,7 @@ struct NLSMBuilder final : nlsmBaseVisitor {
         OP(float, Float);
         OP(double, Double);
         if (ctx-> reference_value())\
-            content = std::get<ObjRefRepr>(std::any_cast<Package::Content>(visitReference_value(ctx -> reference_value())));
+            content = std::get<ReferenceRepr>(std::any_cast<Package::Content>(visitReference_value(ctx -> reference_value())));
 #undef OP
         return {std::move(content)};
     }
@@ -457,7 +457,7 @@ struct NLSMBuilder final : nlsmBaseVisitor {
 
         if (code < ARG_FLAG && ctx->DECIMAL() != nullptr)
             assert(false, build_str(mem, VM_TEXT("op code do not need argument: OPCode#"), to_string(mem, static_cast<std::uint8_t>(code))));
-        if (code > ARG_FLAG && ctx->DECIMAL() != nullptr)
+        if (code > ARG_FLAG && ctx->DECIMAL() == nullptr)
             assert(false, build_str(mem, VM_TEXT("op code need an argument: OPCode#"), to_string(mem, static_cast<std::uint8_t>(code))));
 
         std::int64_t arg = ctx->DECIMAL() == nullptr

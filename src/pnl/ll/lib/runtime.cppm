@@ -18,15 +18,6 @@ import pnl.ll.collections;
 
 using namespace pnl::ll;
 
-template<typename T>
-T ushr(const T a, const T b) noexcept {
-    auto ret = a >> b;
-    if (a < 0)
-        ret &= ~(1 << (sizeof(T) - 1));
-    return ret;
-}
-
-
 export namespace pnl::ll::inline runtime{
 
     struct Process;
@@ -133,7 +124,6 @@ export namespace pnl::ll::inline runtime{
     };
 
     inline namespace load{
-        struct Datapack;
         struct Patch;
         struct LTObject;
     }
@@ -251,6 +241,13 @@ export namespace pnl::ll::runtime::execute {
             return begin[index];
         }
 
+        T* data() noexcept {
+            return reinterpret_cast<T*>(reinterpret_cast<RTTObject*>(this) + 1);
+        }
+        const T* data() const noexcept {
+            return reinterpret_cast<const T*>(reinterpret_cast<const RTTObject>(this) + 1);
+        }
+
         ListV<T> view(Process& proc) noexcept;
         ListV<const T> view(Process& proc) const noexcept;
     };
@@ -318,44 +315,15 @@ export namespace pnl::ll::runtime::load {
             CharArrayRepr
         >;
 
-    // merged service pack
-    struct PNL_LIB_PREFIX Datapack {
-        Set<Path>
-                extern_libs;
-        Dict<Package>
-                package_pack;
-
-        explicit Datapack(MManager* mem) noexcept;
-
-        Datapack(Datapack &&other) noexcept;
-
-        Datapack & operator=(Datapack &&other) noexcept {
-            if (this == &other)
-                return *this;
-            extern_libs = std::move(other.extern_libs);
-            package_pack = std::move(other.package_pack);
-            return *this;
-        }
-
-
-        Datapack& operator += (Datapack&& pack) noexcept;
-
-        Datapack& add_lib(Path path) noexcept {
-            extern_libs.emplace(std::move(path));
-            return *this;
-        }
-
-        Datapack& add_pkg(Str name, Package pkg) noexcept {
-            package_pack.emplace(std::move(name), std::move(pkg));
-            return *this;
-        }
-    };
+    using Datapack = Dict<Package>;
 
     struct PNL_LIB_PREFIX LTObject {
         USize init_rank;
         USize size;
         VirtualAddress type;
         USize maker_override;
+
+        LTObject() noexcept = default;
 
         LTObject(const USize init_rank, const USize size, const VirtualAddress& type, const USize maker_override)
             : init_rank(init_rank),
@@ -365,16 +333,13 @@ export namespace pnl::ll::runtime::load {
         }
 
         bool operator < (const LTObject& o) const noexcept {
-            return init_rank > o.init_rank;
+            return init_rank < o.init_rank;
         }
 
     };
 
     // compiled patch for process
     struct PNL_LIB_PREFIX Patch {
-        Set<Path>
-            extern_libs;
-
         Queue<Str>
             preloaded_strings;
         // preloaded functions' class
@@ -408,12 +373,26 @@ export namespace pnl::ll::runtime::load {
         Queue<USize>
             preloaded_str_len;
 
-        Patch(Set<Path> extern_libs, Queue<Str> preloaded_strings, Queue<OverrideType> preloaded_override_type,
+        Patch(MManager* mem) noexcept
+            : preloaded_strings(mem),
+              preloaded_override_type(mem),
+              arg_types(mem),
+              instructions(mem),
+              ntv_funcs(mem),
+              preloaded_overrides(mem),
+              preloaded_member_segments(mem),
+              preloaded_cls_ext_segments(mem),
+              preloaded(mem),
+              exports(mem),
+              preloaded_params(mem),
+              preloaded_str_len(mem) {}
+
+        Patch(Queue<Str> preloaded_strings, Queue<OverrideType> preloaded_override_type,
             Queue<Queue<VirtualAddress>> arg_types, Queue<Queue<Instruction>> instructions, Queue<NtvId> ntv_funcs,
             Queue<Queue<FOverride>> preloaded_overrides, Queue<Queue<MemberInfo>> preloaded_member_segments,
             Queue<Queue<VirtualAddress>> preloaded_cls_ext_segments, Queue<LTValue> preloaded,
             BiMap<Str, USize> exports, Stack<Value> preloaded_params, Queue<USize> preloaded_str_len)
-            noexcept: extern_libs(std::move(extern_libs)),
+            noexcept:
               preloaded_strings(std::move(preloaded_strings)),
               preloaded_override_type(std::move(preloaded_override_type)),
               arg_types(std::move(arg_types)),
@@ -429,7 +408,7 @@ export namespace pnl::ll::runtime::load {
         }
 
         Patch(Patch &&other) noexcept
-            : extern_libs(std::move(other.extern_libs)),
+            :
               preloaded_strings(std::move(other.preloaded_strings)),
               preloaded_override_type(std::move(other.preloaded_override_type)),
               arg_types(std::move(other.arg_types)),
@@ -447,7 +426,7 @@ export namespace pnl::ll::runtime::load {
         Patch & operator=(Patch &&other) noexcept {
             if (this == &other)
                 return *this;
-            extern_libs = std::move(other.extern_libs);
+
             preloaded_strings = std::move(other.preloaded_strings);
             preloaded_override_type = std::move(other.preloaded_override_type);
             arg_types = std::move(other.arg_types);
@@ -464,7 +443,6 @@ export namespace pnl::ll::runtime::load {
         }
 
         using Delegated = Tuple<
-            Set<Path>&,
             Queue<Str>&,
             Queue<OverrideType>&,
             Queue<Queue<VirtualAddress>>&,
@@ -482,7 +460,6 @@ export namespace pnl::ll::runtime::load {
         // ReSharper disable once CppNonExplicitConversionOperator
         operator Delegated () noexcept {
             return std::tie(
-            extern_libs,
             preloaded_strings,
             preloaded_override_type,
             arg_types,
@@ -518,25 +495,26 @@ export namespace pnl::ll::runtime::load {
 export namespace pnl::ll::runtime {
 
     struct PNL_LIB_PREFIX FuncContext {
-        const std::uint32_t
+        std::uint32_t
             milestone;
         std::uint32_t
             program_counter{0};
-        const VirtualAddress
+        VirtualAddress
             base_addr;
-        const VirtualAddress
+        VirtualAddress
             instructions;
-        Process& process;
 
-        FuncContext(const USize milestone, const VirtualAddress &base_addr, const VirtualAddress &instructions,
-            Process &process)
-            : milestone(milestone),
+        FuncContext(const std::uint32_t milestone,
+            const VirtualAddress base_addr,
+            const VirtualAddress instructions)
+            noexcept: milestone(milestone),
               base_addr(base_addr),
-              instructions(instructions),
-              process(process) {
+              instructions(instructions) {
         }
 
-        Instruction operator * () const noexcept;
+        FuncContext& operator=(const FuncContext&) noexcept = default;
+
+        Instruction decode (Process&) const noexcept;
 
         FuncContext& operator ++ () noexcept;
     };
@@ -549,20 +527,20 @@ export namespace pnl::ll::runtime {
         mutable std::binary_semaphore
                 step_token;
 
-        Process* const
+        Process*
                 process;
         const std::uint8_t
                 thread_id;
         bool
                 is_daemon{false};
-        Stack<std::variant<FuncContext, NtvFunc>>
-                call_stack{&thread_memory};
-        Queue<std::variant<FuncContext, NtvFunc>>
-                init_queue{&thread_memory};
+        std::atomic_bool
+                is_done{false};
+        Deque<std::variant<FuncContext, NtvFunc>>
+                call_deque{&thread_memory};
+        Deque<Value>
+                eval_deque{&thread_memory};
         pmr::Stack
                 thread_page{&thread_memory};
-        Stack<Value>
-                eval_stack{&thread_memory};
         std::jthread
                 native_handler;
 
@@ -570,18 +548,26 @@ export namespace pnl::ll::runtime {
 
         Thread(Thread &&other) noexcept;
 
-        void pause() const noexcept;
-        void resume() const noexcept;
-        void terminate() noexcept {
-            if (native_handler.joinable()) {
-                native_handler.get_stop_source().request_stop();
-                native_handler.join();
-            }
+        Thread & operator=(Thread &&other) noexcept {
+            if (this == &other)
+                return *this;
+            process = other.process;
+            is_daemon = other.is_daemon;
+            is_done.exchange(other.is_done);
+            call_deque = std::move(other.call_deque);
+            eval_deque = std::move(other.eval_deque);
+            thread_page = std::move(other.thread_page);
+            native_handler = std::move(other.native_handler);
+            return *this;
         }
 
-        ~Thread() noexcept { // NOLINT(*-use-equals-default)
-            terminate();
-        }
+        void run(const std::stop_token &) noexcept;
+        void step() noexcept;
+        void pause() const noexcept;
+        void resume() const noexcept;
+        void terminate() noexcept;
+
+        ~Thread() noexcept;
 
         void call_function(const FFamily& family, std::uint32_t override_id) noexcept;
 
@@ -595,20 +581,14 @@ export namespace pnl::ll::runtime {
         [[nodiscard]]
         VirtualAddress function_memory_base() noexcept;
 
-        Value take() noexcept {
-            auto top = eval_stack.top();
-            eval_stack.pop();
-            return top;
-        }
+        Value take() noexcept;
 
         template<typename T=UByte>
         [[nodiscard]]
         T& deref(const VirtualAddress& vr) noexcept;
 
 
-        void run(const std::stop_token &) noexcept;
 
-        void step() noexcept;
 
     };
 
@@ -618,7 +598,6 @@ export namespace pnl::ll::runtime {
 
         // keep libs alive
         List<VMLib>         libraries{&process_memory};
-        BiMap<Str, Path>    plugin_provider{&process_memory};
 
         // stores native func
         pmr::Stack          process_page{&process_memory};
@@ -635,14 +614,14 @@ export namespace pnl::ll::runtime {
                             named_exports{&process_memory};
 
         explicit Process(MManager*);
+
         ~Process() noexcept { // NOLINT(*-use-equals-default)
-            for (auto& thr: threads)
-                thr.terminate();
-            libraries.clear();
+            terminate();
         }
 
         void pause() const noexcept;
         void resume() const noexcept;
+        void terminate() noexcept;
 
         static VirtualAddress get_vr(
             std::uint8_t thread_id,
@@ -660,6 +639,7 @@ export namespace pnl::ll::runtime {
 
         template<typename T>
         T& deref(const VirtualAddress vr) noexcept {
+            assert(!vr.is_reserved(), {"trying to deref a reserve ptr", &process_memory});
             // if (vr.is_native()) todo
             if (vr.is_process())
                 return *reinterpret_cast<T*>(process_page[vr.id()] + vr.offset());
@@ -670,8 +650,8 @@ export namespace pnl::ll::runtime {
         std::optional<Patch> compile_datapack(Datapack, Str* =nullptr) noexcept;
 
 
-
-        void load_patch(Patch&&, Str*) noexcept;
+        void load_library(VMLib&&) noexcept;
+        void load_patch(Patch&&, Str*);
     };
 }
 

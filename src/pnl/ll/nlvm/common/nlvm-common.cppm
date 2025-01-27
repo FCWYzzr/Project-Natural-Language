@@ -6,14 +6,60 @@ module;
 export module nlvm.common;
 import pnl.ll;
 
+using namespace std::filesystem;
 using namespace pnl::ll;
 
+
+
+
+
 export namespace nlvm::inline common{
-    void vm_main(
-        const std::filesystem::path& runtime_path,
+    constexpr char help[] = R"(
+usage
+    nlvm [-n <library>] [-nd <library dir>] [-l <image>] -r <input> [-p <params>]
+    nlvm <input> [-p <params>]
 
-        const List<Str>& param
-        ) noexcept {
+[xxx]           optional param xxx
+<image>         image(s) to be loaded (IN INPUT ORDER)
+<library>       platform library
+<library dir>   platform library directory
+<input>         input package file(s)
+<params>        params given to proc main
 
-    }
+example
+    nlvm test.nlpkg builtins.nlpkg
+    nlvm -n rt -l builtins.nlimg -r test.nlpkg "hello world"
+
+)";
+    struct LimitMemoryResource final: std::pmr::synchronized_pool_resource {
+        std::array<UByte, 4_KB> cache{};
+        std::unique_ptr<UByte[]> managed;
+        std::pmr::monotonic_buffer_resource cache_buffer;
+        std::pmr::monotonic_buffer_resource memory_buffer;
+
+
+        explicit LimitMemoryResource(const USize size) noexcept:
+            synchronized_pool_resource{&cache_buffer},
+            managed{std::make_unique<UByte[]>(size)},
+            cache_buffer{
+                cache.data(),
+                cache.size(),
+                size == 0
+                ? std::pmr::new_delete_resource()
+                : &memory_buffer
+            },
+            memory_buffer{
+                managed.get(),
+                size,
+                std::pmr::null_memory_resource()
+            }
+        {}
+        ~LimitMemoryResource() noexcept override = default;
+    };
+
+    // todo: add param-controlled memory limit
+    LimitMemoryResource memory{0};
+
+    void prepare(Process&, int, const char*[]);
+    void prepare(Process&, int, const wchar_t*[]);
 }

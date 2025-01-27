@@ -20,7 +20,7 @@ export namespace pnl::ll::inline string{
     USize length(SSize v, IntBase base=IntBase::DEC) noexcept;
 
     PNL_LIB_PREFIX
-    Str& append(Str& self, Long v, IntBase base=IntBase::DEC) noexcept;
+    Str& append(Str& self, Long v, IntBase base=IntBase::DEC);
 
 
     PNL_LIB_PREFIX
@@ -30,28 +30,8 @@ export namespace pnl::ll::inline string{
         Long v,
         IntBase base=IntBase::DEC) noexcept;
 
-    PNL_LIB_PREFIX
-    Long to_num(const Str& v,
-        IntBase base=IntBase::DEC) noexcept;
 
 
-
-
-    // format: Arr<T>
-    PNL_LIB_PREFIX
-    Str typename_arr(
-        MManager*
-            mem,
-        const Str& type,
-        USize size) noexcept;
-
-    // format: (p1t, p2t, <1>, p3t, <2>, ...) -> ret/<i>
-    PNL_LIB_PREFIX
-    Str typename_fun(
-            MManager*
-                mem,
-            const List<Str>&   param_sigs,
-            const Str&          ret_sig) noexcept;
 
 
     template<typename ...Args>

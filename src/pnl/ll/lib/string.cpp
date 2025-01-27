@@ -16,11 +16,11 @@ USize string::length(const SSize v, const IntBase base) noexcept {
     return size_cast(floor(log2(v) / log2(static_cast<int>(base)))) + 1;
 }
 
-Str & string::append(Str &self, Long v, IntBase base) noexcept {
+Str & string::append(Str &self, Long v, IntBase base) {
     using enum IntBase;
     constexpr static Char mapping[] = VM_TEXT("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-    assert(static_cast<int>(base) > 1, "invalid base");
-    assert(static_cast<int>(base) < 36, "base >= 36, infer digit desc fail");
+    assert(static_cast<int>(base) > 1, {"invalid base", self.get_allocator()});
+    assert(static_cast<int>(base) < 36, {"base >= 36, infer digit desc fail", self.get_allocator()});
 
     if (v == 0)
         return self += mapping[0];
@@ -54,63 +54,4 @@ Str string::to_string(MManager * const mem, const Long v, const IntBase base) no
     return std::move(s);
 }
 
-Long string::to_num(const Str &v, IntBase base) noexcept {
-    Long num = 0;
-    const auto e = v.begin() - 1;
-    auto b = v.end() - 1;
 
-    while (b != e) {
-        if (*b >= VM_TEXT('0') && *b <= VM_TEXT('9'))
-            num = num * 10 + (*b - VM_TEXT('0'));
-        else if (*b >= VM_TEXT('a') && *b <= VM_TEXT('f'))
-            num = num * 10 + 10 + (*b - VM_TEXT('a'));
-        else if (*b >= VM_TEXT('A') && *b <= VM_TEXT('F'))
-            num = num * 10 + 10 + (*b - VM_TEXT('A'));
-        else
-            return -1;
-    }
-
-    return num;
-}
-
-Str string::typename_arr(MManager * const mem, const Str &type, const USize size) noexcept {
-
-    auto ret = Str{mem};
-    ret += type;
-    ret += VM_TEXT('[');
-    append(ret, static_cast<Long>(size));
-    ret += VM_TEXT(']');
-    return std::move(ret);
-}
-
-Str string::typename_fun(MManager *mem, const List<Str> &param_sigs, const Str &ret_sig) noexcept {
-    USize buf_size = 6; // "() -> "
-
-    if (!param_sigs.empty())
-        buf_size += size_cast(param_sigs[0].length());
-
-
-    for (auto& p_sig: param_sigs | std::views::drop(1))
-        buf_size += size_cast(p_sig.length() + 2);    // , ti
-
-    buf_size += size_cast(ret_sig.length());  // ti
-
-    auto ret = Str(mem);
-    ret.reserve(buf_size);
-
-    ret += VM_TEXT('(');
-    if (!param_sigs.empty())
-        ret += param_sigs[0];
-
-    for (auto& p_sig: param_sigs | std::views::drop(1)) {
-        ret += VM_TEXT(", ");
-        ret += p_sig;
-    }
-
-
-    ret += VM_TEXT(") -> ");
-
-    ret += ret_sig;
-
-    return ret;
-}

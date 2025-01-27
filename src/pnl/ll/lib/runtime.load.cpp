@@ -30,52 +30,18 @@ VMLib::~VMLib() noexcept {
         dlclose(lib_ref);
 }
 
-Datapack::Datapack(
-    MManager* mem) noexcept:
-    extern_libs(mem),
-    package_pack(mem) {
-}
-
-Datapack::Datapack(Datapack &&other) noexcept: extern_libs(std::move(other.extern_libs)),
-                                               package_pack(std::move(other.package_pack)) {
-}
-
-Datapack & Datapack::operator+=(Datapack &&pack) noexcept {
-    for (auto& elem: pack.extern_libs)
-        extern_libs.emplace(std::move(elem));
-    extern_libs.clear();
-
-    for (auto& [key, val]: pack.package_pack) {
-        assert(!package_pack.contains(key), VM_TEXT("duplicate library loading"));
-        package_pack.emplace(key, std::move(val));
-    }
-
-    return *this;
-}
-
-
-
 static bool
 merge_datapack(
     MManager& process_memory,
-    Dict<VirtualAddress>& named_exports,
+    const Dict<VirtualAddress>& named_exports,
     Datapack datapack,
     Str * const err,
-    Set<Path>& libraries,
     List<Package::Content>& merged_values,
     BiMap<Str, USize>& exports,
     Queue<USize>& base_addr_queue) noexcept {
 
-    auto package_pack = Dict<Package>{&process_memory};
-    package_pack = std::move(datapack.package_pack);
-
-    libraries = std::move(datapack.extern_libs);
-
-
-
-
     merged_values.reserve(std::ranges::fold_left(
-        package_pack
+        datapack
         | std::views::values
         | std::views::transform([](const Package& pkg) {
             return pkg.data.size();
@@ -85,7 +51,7 @@ merge_datapack(
 
 
     // preload - confirm f-families' base offset
-    for (auto& [name, pkg]: package_pack) {
+    for (auto& [name, pkg]: datapack) {
         const auto name_prefix = name + VM_TEXT("::");
         const auto base_offset = merged_values.size();
         for (const auto& [idx, obj]: pkg.data
@@ -105,18 +71,13 @@ merge_datapack(
                             to_string(&process_memory, main.size())
                         );
                         assert(err != nullptr, info);
-                        *err = info;
+                        *err = std::move(info);
                         return true;
                     }
                     // todo main func sig check
                 }
-                else [[likely]]{
-                    symbol = name_prefix + pkg.exports.at(idx);
-                    if (obj.index() == 7) [[unlikely]]
-                        std::get<7>(obj).name = symbol;
-                    else if (obj.index() == 10) [[unlikely]]
-                        std::get<10>(obj).name = symbol;
-                }
+                else [[likely]]
+                    symbol = name_prefix + static_cast<Str&>(pkg.exports.at(idx));
                 if (named_exports.contains(symbol) || exports.contains(symbol))[[unlikely]]{
                     auto info = build_str(&process_memory,
                         VM_TEXT("export name dup: "),
@@ -147,14 +108,12 @@ std::optional<Patch> Process::compile_datapack(
     auto base_addr_queue = Queue<USize>{&process_memory};
     auto merged_values = List<Package::Content>{&process_memory};
     auto exports = BiMap<Str, USize>{&process_memory};
-    auto libraries = Set<Path>{&process_memory};
 
     if (merge_datapack(
         process_memory,
         named_exports,
         std::move(datapack),
         err,
-        libraries,
         merged_values,
         exports,
         base_addr_queue
@@ -173,7 +132,7 @@ std::optional<Patch> Process::compile_datapack(
         }))
         std::visit([&]<typename T>(const T& v) -> void {
             if constexpr ( !TypePack<NamedTypeRepr,
-                ObjRefRepr,
+                ReferenceRepr,
                 ClassRepr,
                 FFamilyRepr,
                 ObjectRepr,
@@ -186,16 +145,16 @@ std::optional<Patch> Process::compile_datapack(
 
 
     auto preloaded_strings = Queue<Str>{&process_memory};
-    auto named_type_type = named_exports.contains(VM_TEXT("::NamedType"))
-        ? named_exports.at(VM_TEXT("::NamedType"))
-        : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("::NamedType")));
+    auto named_type_type = named_exports.contains(VM_TEXT("core::NamedType"))
+        ? named_exports.at(VM_TEXT("core::NamedType"))
+        : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("core::NamedType")));
     // load named type
     for (const auto [idx, obj]: merged_values
         | std::views::enumerate
         | std::views::filter([](const auto& o) {
             return std::get<1>(o).index() == 7;
         })) {
-        if (!exports.contains(std::get<7>(obj).maker)) [[unlikely]] {
+        if (!exports.contains<Str>(std::get<7>(obj).maker)) [[unlikely]] {
             auto info = build_str(
                 &process_memory,
                 VM_TEXT("could not found maker of obj#"),
@@ -207,7 +166,7 @@ std::optional<Patch> Process::compile_datapack(
             *err = std::move(info);
             return {};
         }
-        if (!exports.contains(std::get<7>(obj).collector)) [[unlikely]] {
+        if (!exports.contains<Str>(std::get<7>(obj).collector)) [[unlikely]] {
             auto info = build_str(
                 &process_memory,
                 VM_TEXT("could not found collector of obj#"),
@@ -223,10 +182,10 @@ std::optional<Patch> Process::compile_datapack(
             Type{{named_type_type},
                 std::get<7>(obj).size,
             VirtualAddress::from_reserve_offset(
-                exports.at(std::get<7>(obj).maker)
+                exports.at<Str>(std::get<7>(obj).maker)
             ),
             VirtualAddress::from_reserve_offset(
-                exports.at(std::get<7>(obj).collector)
+                exports.at<Str>(std::get<7>(obj).collector)
             )},
             VirtualAddress::from_reserve_offset(
                 preloaded_strings.size()
@@ -242,8 +201,8 @@ std::optional<Patch> Process::compile_datapack(
             return std::get<1>(o).index() == 8;
         })) {
         if (const auto& ref_repr = std::get<8>(obj);
-            exports.contains(ref_repr)) [[likely]]{
-            preloaded[idx] = VirtualAddress::from_reserve_offset(exports.at(ref_repr));
+            exports.contains<Str>(ref_repr)) [[likely]]{
+            preloaded[idx] = VirtualAddress::from_reserve_offset(exports.at<Str>(ref_repr));
         }
         else if (named_exports.contains(ref_repr)) [[likely]]
             preloaded[idx] = named_exports.at(ref_repr);
@@ -259,15 +218,15 @@ std::optional<Patch> Process::compile_datapack(
         }
     }
 
-    const auto override_type_type = named_exports.contains(VM_TEXT("::FOverride"))
-        ? named_exports.at(VM_TEXT("::FOverride"))
-        : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("::FOverride")));
-    const auto override_inst_cls_maker = named_exports.contains(VM_TEXT("::FOverride::maker"))
-        ? named_exports.at(VM_TEXT("::FOverride::maker"))
-        : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("::FOverride::maker")));
-    const auto override_inst_cls_collector = named_exports.contains(VM_TEXT("::FOverride::collector"))
-        ? named_exports.at(VM_TEXT("::FOverride::collector"))
-        : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("::FOverride::collector")));
+    const auto override_type_type = named_exports.contains(VM_TEXT("core::FOverride"))
+        ? named_exports.at(VM_TEXT("core::FOverride"))
+        : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("core::FOverride")));
+    const auto override_inst_cls_maker = named_exports.contains(VM_TEXT("core::FOverride::maker"))
+        ? named_exports.at(VM_TEXT("core::FOverride::maker"))
+        : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("core::FOverride::maker")));
+    const auto override_inst_cls_collector = named_exports.contains(VM_TEXT("core::FOverride::collector"))
+        ? named_exports.at(VM_TEXT("core::FOverride::collector"))
+        : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("core::FOverride::collector")));
 
 
     auto arg_types = Queue<Queue<VirtualAddress>>{&process_memory};
@@ -276,9 +235,9 @@ std::optional<Patch> Process::compile_datapack(
     auto instructions = Queue<Queue<Instruction>>{&process_memory};
     auto preloaded_overrides = Queue<Queue<FOverride>>{&process_memory};
     // compile functions
-    for (auto family_type = named_exports.contains(VM_TEXT("::FFamily"))
-        ? named_exports.at(VM_TEXT("::FFamily"))
-        : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("::FFamily")));
+    for (auto family_type = named_exports.contains(VM_TEXT("core::FFamily"))
+        ? named_exports.at(VM_TEXT("core::FFamily"))
+        : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("core::FFamily")));
         const auto [idx, obj]: merged_values
             | std::views::enumerate
             | std::views::filter([](const auto& o) {
@@ -290,8 +249,8 @@ std::optional<Patch> Process::compile_datapack(
         for (auto& o_repr: family) {
             auto args = Queue<VirtualAddress>{&process_memory};
             for (auto& t: o_repr.arg_ts) {
-                if (exports.contains(t)) [[unlikely]]
-                    args.emplace(VirtualAddress::from_reserve_offset(exports.at(t)));
+                if (exports.contains<Str>(t)) [[unlikely]]
+                    args.emplace(VirtualAddress::from_reserve_offset(exports.at<Str>(t)));
                 else if (named_exports.contains(t)) [[likely]]
                     args.emplace(named_exports.at(t));
                 else {
@@ -307,8 +266,9 @@ std::optional<Patch> Process::compile_datapack(
                 }
             }
             VirtualAddress ret;{
-                if (const auto& t = o_repr.ret_t; exports.contains(t)) [[unlikely]]
-                    ret = VirtualAddress::from_reserve_offset(exports.at(t));
+                if (const auto& t = o_repr.ret_t;
+                    exports.contains<Str>(t)) [[unlikely]]
+                    ret = VirtualAddress::from_reserve_offset(exports.at<Str>(t));
                 else if (named_exports.contains(t)) [[likely]]
                     ret = named_exports.at(t);
                 else {
@@ -395,7 +355,7 @@ std::optional<Patch> Process::compile_datapack(
 
         for (const auto lst: {&cls.method_list, &cls.static_method_list, &cls.static_member_list})
             for (auto& dep: *lst) {
-                if (!exports.contains(dep)) [[unlikely]] {
+                if (!exports.contains<Str>(dep)) [[unlikely]] {
                     auto info = build_str(
                         &process_memory,
                         VM_TEXT("class #"), to_string(&process_memory, static_cast<Long>(idx)),
@@ -412,7 +372,7 @@ std::optional<Patch> Process::compile_datapack(
             if (named_exports.contains(dep)) [[unlikely]]
                 // skip if compiled
                 continue;
-            if (!exports.contains(dep)) [[unlikely]] {
+            if (!exports.contains<Str>(dep)) [[unlikely]] {
                 if (name.empty())
                     continue;
                 auto info = build_str(
@@ -425,10 +385,10 @@ std::optional<Patch> Process::compile_datapack(
                 *err = std::move(info);
                 return std::nullopt;
             }
-            if (merged_values.at(exports.at(dep)).index() != 10) [[likely]]
+            if (merged_values.at(exports.at<Str>(dep)).index() != 10) [[likely]]
                 // is named type
                 continue;
-            const auto dep_idx = exports.at(dep);
+            const auto dep_idx = exports.at<Str>(dep);
 
             if (!dependency_graph.contains(dep_idx)) [[unlikely]]
                 dependency_graph.emplace(dep_idx, Pair{0, Set<USize>{{idx}, &process_memory}});
@@ -450,9 +410,9 @@ std::optional<Patch> Process::compile_datapack(
         | std::views::keys
     );
 
-    const auto cls_type_addr = named_exports.contains(VM_TEXT("::Class"))
-        ? named_exports.at(VM_TEXT("::Class"))
-        : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("::Class")));
+    const auto cls_type_addr = named_exports.contains(VM_TEXT("core::Class"))
+        ? named_exports.at(VM_TEXT("core::Class"))
+        : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("core::Class")));
 
     auto preloaded_member_segments = Queue<Queue<MemberInfo>>{&process_memory};
     auto preloaded_cls_ext_segments = Queue<Queue<VirtualAddress>>{&process_memory};
@@ -475,11 +435,11 @@ std::optional<Patch> Process::compile_datapack(
         for (auto& [mbr_name, mbr_cls_id]: cls.member_list) {
             if (mbr_name.empty()) [[unlikely]] {
                 // find a padding
-                member_size += static_cast<Long>(mbr_cls_id.size());
+                member_size += static_cast<Long>(mbr_cls_id.v.size());
             }
-            else if (exports.contains(mbr_cls_id)) [[likely]] {
-                const auto member_cls_ref = VirtualAddress::from_reserve_offset(exports.at(mbr_cls_id));
-                const auto& member_cls = preloaded.at(exports.at(mbr_cls_id));
+            else if (exports.contains<Str>(mbr_cls_id)) [[likely]] {
+                const auto member_cls_ref = VirtualAddress::from_reserve_offset(exports.at<Str>(mbr_cls_id));
+                const auto& member_cls = preloaded.at(exports.at<Str>(mbr_cls_id));
                 const auto& mem_tp = (member_cls.index() == 7)
                     ? std::get<7>(member_cls)
                     : std::get<10>(member_cls).super;
@@ -496,22 +456,22 @@ std::optional<Patch> Process::compile_datapack(
         }
 
         for (auto &smbr_id: cls.static_member_list) {
-            static_members.emplace(VirtualAddress::from_reserve_offset(exports.at(smbr_id)));
+            static_members.emplace(VirtualAddress::from_reserve_offset(exports.at<Str>(smbr_id)));
         }
 
         for (auto& method_id: cls.method_list) {
-            methods.emplace(VirtualAddress::from_reserve_offset(exports.at(method_id)));
+            methods.emplace(VirtualAddress::from_reserve_offset(exports.at<Str>(method_id)));
         }
 
         for (auto& method_id: cls.static_method_list) {
-            static_methods.emplace(VirtualAddress::from_reserve_offset(exports.at(method_id)));
+            static_methods.emplace(VirtualAddress::from_reserve_offset(exports.at<Str>(method_id)));
         }
 
         preloaded[cls_id] = Class{
             {{{cls_type_addr},
                 member_size,
-                VirtualAddress::from_reserve_offset(exports.at(cls.maker)),
-                VirtualAddress::from_reserve_offset(exports.at(cls.collector))},
+                VirtualAddress::from_reserve_offset(exports.at<Str>(cls.maker)),
+                VirtualAddress::from_reserve_offset(exports.at<Str>(cls.collector))},
             VirtualAddress::from_reserve_offset(preloaded_strings.size())},
             VirtualAddress::from_reserve_offset(preloaded_member_segments.size()),
             VirtualAddress::from_reserve_offset(preloaded_cls_ext_segments.size()),
@@ -565,7 +525,7 @@ std::optional<Patch> Process::compile_datapack(
                 return std::get<1>(o).index() == 11;
             })) {
         auto& obj_repr = std::get<11>(obj);
-        if (!named_exports.contains(obj_repr.type) && !exports.contains(obj_repr.type)) [[unlikely]]{
+        if (!named_exports.contains(obj_repr.type) && !exports.contains<Str>(obj_repr.type)) [[unlikely]]{
             auto info = build_str(
                 &process_memory,
                 VM_TEXT("fail to load object #"),
@@ -584,7 +544,7 @@ std::optional<Patch> Process::compile_datapack(
             if (named_exports.contains(vv)) [[unlikely]]
                 continue;
 
-            if (!exports.contains(vv)) [[unlikely]]{
+            if (!exports.contains<Str>(vv)) [[unlikely]]{
                 auto info = build_str(
                     &process_memory,
                     VM_TEXT("fail to load obj: #"),
@@ -598,7 +558,7 @@ std::optional<Patch> Process::compile_datapack(
             }
 
             // refers to lib obj, add dep
-            const auto dep_obj_idx = exports.at(vv);
+            const auto dep_obj_idx = exports.at<Str>(vv);
             if (!dependency_graph.contains(dep_obj_idx)) [[unlikely]]
                 dependency_graph.emplace(dep_obj_idx, std::pair{0, Set<USize>{&process_memory}});
             ++ dependency_graph[dep_obj_idx].first;
@@ -628,7 +588,7 @@ std::optional<Patch> Process::compile_datapack(
         auto& obj = std::get<ObjectRepr>(merged_values.at(obj_id));
         for (auto& v: obj.constructor_params)
             std::visit([&]<typename T>(const T& vv) {
-                if constexpr (std::same_as<T, ObjRefRepr>)
+                if constexpr (std::same_as<T, ReferenceRepr>)
                     preloaded_params.emplace(TFlag<VirtualAddress>, VirtualAddress::from_reserve_offset(exports.at<Str>(vv)));
                 else
                     preloaded_params.emplace(TFlag<T>, vv);
@@ -646,8 +606,8 @@ std::optional<Patch> Process::compile_datapack(
             size = deref<Type>(type).instance_size;
         }
         else {
-            type = VirtualAddress::from_reserve_offset(exports.at(obj.type));
-            auto& t = preloaded.at(exports.at(
+            type = VirtualAddress::from_reserve_offset(exports.at<Str>(obj.type));
+            auto& t = preloaded.at(exports.at<Str>(
                 obj.type
             ));
             if (t.index() == 8)
@@ -698,7 +658,7 @@ std::optional<Patch> Process::compile_datapack(
         | std::views::filter([](const auto& o) {
             return std::get<1>(o).index() == 12;
         })) {
-        preloaded_str_length.emplace(std::get<12>(obj).length());
+        preloaded_str_length.emplace(std::get<12>(obj).v.length());
         preloaded[idx] = std::move(std::get<12>(obj));
     }
 
@@ -708,7 +668,6 @@ std::optional<Patch> Process::compile_datapack(
         preloaded_q.emplace(std::move(v));
 
     return {Patch{
-        std::move(libraries),
         std::move(preloaded_strings),
         std::move(preloaded_override_type),
         std::move(arg_types),
@@ -724,28 +683,36 @@ std::optional<Patch> Process::compile_datapack(
     }};
 }
 
+void Process::load_library(VMLib &&lib) noexcept {
+    libraries.emplace_back(std::move(lib));
+}
+
 static
 void call_init_function(Thread& thr, const FFamily &family, const std::uint32_t override_id) noexcept {
-    const auto& override = thr.deref<Array<FOverride>>(family.overrides)[override_id];
-    thr.init_queue.emplace(
-        TFlag<FuncContext>,
-        thr.thread_page.milestone(),
-        family.base_addr,
-        override.vm(),
-        *thr.process
-    );
+    if (const auto& override = thr.deref<Array<FOverride>>(family.overrides)[override_id];
+        override.is_native)
+        thr.call_deque.emplace_front(
+            TFlag<NtvFunc>,
+            override.ntv()
+        );
+    else
+        thr.call_deque.emplace_front(
+            TFlag<FuncContext>,
+            thr.thread_page.milestone(),
+            family.base_addr,
+            override.vm()
+        );
 }
 
 
 void Process::load_patch(
     Patch&& patch,
     Str* const err
-    ) noexcept {
+    ) {
     auto& thread = main_thread();
 
 
     auto [
-        extern_libs,
         preloaded_strings,
         preloaded_override_type,
         preloaded_arg_types,
@@ -760,15 +727,15 @@ void Process::load_patch(
         preloaded_str_length
     ] = std::move(patch);
 
-    const auto arr_type_t_addr = named_exports.contains(VM_TEXT("::ArrayType"))
-        ? named_exports.at(VM_TEXT("::ArrayType"))
-        : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("::ArrayType")));
-    const auto arr_constructor_addr = named_exports.contains(VM_TEXT("::ArrayType::maker"))
-        ? named_exports.at(VM_TEXT("::ArrayType::maker"))
-        : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("::ArrayType::maker")));
-    const auto arr_destructor_addr = named_exports.contains(VM_TEXT("::ArrayType::collector"))
-        ? named_exports.at(VM_TEXT("::ArrayType::destructor"))
-        : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("::ArrayType::collector")));
+    const auto arr_type_t_addr = named_exports.contains(VM_TEXT("core::Array"))
+        ? named_exports.at(VM_TEXT("core::Array"))
+        : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("core::Array")));
+    const auto arr_constructor_addr = named_exports.contains(VM_TEXT("core::Array::maker"))
+        ? named_exports.at(VM_TEXT("core::Array::maker"))
+        : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("core::Array::maker")));
+    const auto arr_destructor_addr = named_exports.contains(VM_TEXT("core::Array::collector"))
+        ? named_exports.at(VM_TEXT("core::Array::collector"))
+        : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("core::Array::collector")));
 
 
     auto translate_required = Queue<VirtualAddress>{&process_memory};
@@ -805,15 +772,15 @@ void Process::load_patch(
     VirtualAddress string_base_addr;{
 
         // phase - 1.1      load str arr classes
-        const auto char_addr = named_exports.contains(VM_TEXT("::char"))
-            ? named_exports.at(VM_TEXT("::char"))
-            : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("::char")));
+        const auto char_addr = named_exports.contains(VM_TEXT("core::char"))
+            ? named_exports.at(VM_TEXT("core::char"))
+            : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("core::char")));
         auto type_queue = Queue<VirtualAddress>{&process_memory};
 
         for (auto [[maybe_unused]]_: std::views::iota(0u, preloaded_strings.size())) {
             auto str = std::move(preloaded_strings.front());
             preloaded_strings.pop();
-            if (auto name = typename_arr(&process_memory, VM_TEXT("::char"), str.size());
+            if (auto name = typename_arr(&process_memory, VM_TEXT("core::char"), str.size());
                 !named_exports.contains(name)) {
                 named_exports.emplace(std::move(name), type_queue.emplace(VirtualAddress::from_process_offset(
                     process_page.milestone()
@@ -869,15 +836,15 @@ void Process::load_patch(
         // phase - 2.1 load instruction lists
         VirtualAddress instruction_base_addr;{
             // phase - 2.1.1      load inst arr classes
-            const auto inst_addr = named_exports.contains(VM_TEXT("::instruction"))
-                ? named_exports.at(VM_TEXT("::instruction"))
-                : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("::instruction")));
+            const auto inst_addr = named_exports.contains(VM_TEXT("core::instruction"))
+                ? named_exports.at(VM_TEXT("core::instruction"))
+                : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("core::instruction")));
             auto type_queue = Queue<VirtualAddress>{&process_memory};
 
             for (auto [[maybe_unused]]_: std::views::iota(0u, preloaded_instructions.size())) {
                 auto inst = std::move(preloaded_instructions.front());
                 preloaded_instructions.pop();
-                if (auto name = typename_arr(&process_memory, VM_TEXT("::Instruction"), inst.size());
+                if (auto name = typename_arr(&process_memory, VM_TEXT("core::Instruction"), inst.size());
                     !named_exports.contains(name)) {
                     named_exports.emplace(std::move(name), type_queue.emplace(VirtualAddress::from_process_offset(
                         process_page.milestone()
@@ -935,14 +902,14 @@ void Process::load_patch(
         VirtualAddress override_type_base_addr;{
             // phase - 2.2.1 load args
             VirtualAddress args_base_addr;{
-                const auto addr_addr = named_exports.contains(VM_TEXT("::address"))
-                    ? named_exports.at(VM_TEXT("::address"))
-                    : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("::address")));
+                const auto addr_addr = named_exports.contains(VM_TEXT("core::address"))
+                    ? named_exports.at(VM_TEXT("core::address"))
+                    : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("core::address")));
                 auto type_queue = Queue<VirtualAddress>(&process_memory);
                 for (auto [[maybe_unused]]_: std::views::iota(0u, preloaded_arg_types.size())) {
                     auto arg_ts = std::move(preloaded_arg_types.front());
                     preloaded_arg_types.pop();
-                    if (auto name = typename_arr(&process_memory, VM_TEXT("address"), arg_ts.size());
+                    if (auto name = typename_arr(&process_memory, VM_TEXT("core::address"), arg_ts.size());
                         !named_exports.contains(name)) {
                         named_exports.emplace(std::move(name), type_queue.emplace(VirtualAddress::from_process_offset(
                             process_page.milestone()
@@ -1005,9 +972,9 @@ void Process::load_patch(
             override_type_base_addr = VirtualAddress::from_process_offset(
                 process_page.milestone()
             );
-            const auto override_type_type_addr = named_exports.contains(VM_TEXT("::FOverride"))
-                ? named_exports.at(VM_TEXT("::FOverride"))
-                : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("::FOverride")));
+            const auto override_type_type_addr = named_exports.contains(VM_TEXT("core::FOverride"))
+                ? named_exports.at(VM_TEXT("core::FOverride"))
+                : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("core::FOverride")));
             // phase - 2.2.2 load override type
             while (!preloaded_override_type.empty()) {
                 auto& override_type = preloaded_override_type.front();
@@ -1035,15 +1002,15 @@ void Process::load_patch(
         }
 
         // phase - 2.3 load override arr classes
-        const auto override_addr = named_exports.contains(VM_TEXT("::FOverride"))
-            ? named_exports.at(VM_TEXT("::FOverride"))
-            : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("::FOverride")));
+        const auto override_addr = named_exports.contains(VM_TEXT("core::FOverride"))
+            ? named_exports.at(VM_TEXT("core::FOverride"))
+            : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("core::FOverride")));
         auto type_queue = Queue<VirtualAddress>{&process_memory};
 
         for (auto [[maybe_unused]]_: std::views::iota(0u, preloaded_overrides.size())) {
             auto override = std::move(preloaded_overrides.front());
             preloaded_overrides.pop();
-            if (auto name = typename_arr(&process_memory, VM_TEXT("::FOverride"), override.size());
+            if (auto name = typename_arr(&process_memory, VM_TEXT("core::FOverride"), override.size());
                 !named_exports.contains(name)) {
                 named_exports.emplace(std::move(name), type_queue.emplace(VirtualAddress::from_process_offset(
                     process_page.milestone()
@@ -1110,15 +1077,15 @@ void Process::load_patch(
     VirtualAddress class_member_addr;{
 
         // phase - 3.1 load member info arr classes
-        const auto member_info_type_addr = named_exports.contains(VM_TEXT("::MemberInfo"))
-            ? named_exports.at(VM_TEXT("::MemberInfo"))
-            : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("::MemberInfo")));
+        const auto member_info_type_addr = named_exports.contains(VM_TEXT("core::MemberInfo"))
+            ? named_exports.at(VM_TEXT("core::MemberInfo"))
+            : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("core::MemberInfo")));
         auto type_queue = Queue<VirtualAddress>{&process_memory};
 
         for (auto [[maybe_unused]]_: std::views::iota(0u, preloaded_member_segments.size())) {
             auto member = std::move(preloaded_member_segments.front());
             preloaded_member_segments.pop();
-            if (auto name = typename_arr(&process_memory, VM_TEXT("::MemberInfo"), member.size());
+            if (auto name = typename_arr(&process_memory, VM_TEXT("core::MemberInfo"), member.size());
                 !named_exports.contains(name)) {
                 named_exports.emplace(std::move(name), type_queue.emplace(VirtualAddress::from_process_offset(
                     process_page.milestone()
@@ -1182,21 +1149,19 @@ void Process::load_patch(
 
     }
 
-    auto class_lifetime = Queue<VirtualAddress>{&process_memory};
-
     // phase - 4 load class ext list
     VirtualAddress class_ext_addr;{
 
         // phase - 4.1 load addr arr classes
-        const auto member_info_type_addr = named_exports.contains(VM_TEXT("::address"))
-        ? named_exports.at(VM_TEXT("::address"))
-        : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("::address")));
+        const auto member_info_type_addr = named_exports.contains(VM_TEXT("core::address"))
+        ? named_exports.at(VM_TEXT("core::address"))
+        : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("core::address")));
         auto type_queue = Queue<VirtualAddress>{&process_memory};
 
         for (auto [[maybe_unused]]_: std::views::iota(0u, preloaded_cls_ext_segments.size())) {
             auto ext = std::move(preloaded_cls_ext_segments.front());
             preloaded_cls_ext_segments.pop();
-            if (auto name = typename_arr(&process_memory, VM_TEXT("address"), ext.size());
+            if (auto name = typename_arr(&process_memory, VM_TEXT("core::address"), ext.size());
                 !named_exports.contains(name)) {
                 named_exports.emplace(std::move(name), type_queue.emplace(VirtualAddress::from_process_offset(
                     process_page.milestone()
@@ -1235,15 +1200,6 @@ void Process::load_patch(
             auto repr = &process_page.ref_top<UByte>();
             *reinterpret_cast<RTTObject*&>(repr) ++ = {type_addr};
 
-
-            if (counter == 0) {
-                // constructor
-                class_lifetime.emplace(*reinterpret_cast<VirtualAddress*&>(repr) ++ = ext.front());
-                ext.pop();
-                // destructor
-                class_lifetime.emplace(*reinterpret_cast<VirtualAddress*&>(repr) ++ = ext.front());
-                ext.pop();
-            }
             while (!ext.empty()) {
                 *reinterpret_cast<VirtualAddress*&>(repr) ++ = ext.front();
                 ext.pop();
@@ -1255,15 +1211,15 @@ void Process::load_patch(
 
     // phase - 5 load char arr type
     auto str_type = Queue<VirtualAddress>{&process_memory};{
-        const auto char_addr = named_exports.contains(VM_TEXT("::char"))
-        ? named_exports.at(VM_TEXT("::char"))
-        : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("::char")));
+        const auto char_addr = named_exports.contains(VM_TEXT("core::char"))
+        ? named_exports.at(VM_TEXT("core::char"))
+        : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("core::char")));
 
         while (!preloaded_str_length.empty()) {
             auto len = preloaded_str_length.front();
             preloaded_str_length.pop();
 
-            if (auto name = typename_arr(&process_memory, VM_TEXT("::char"), len);
+            if (auto name = typename_arr(&process_memory, VM_TEXT("core::char"), len);
                 !named_exports.contains(name)) {
                 named_exports.emplace(std::move(name), str_type.emplace(VirtualAddress::from_process_offset(
                     process_page.milestone()
@@ -1348,8 +1304,6 @@ void Process::load_patch(
                 });
             }
             else if constexpr (std::same_as<T, Class>) {
-                const auto cons = class_lifetime.front(); class_lifetime.pop();
-                const auto des = class_lifetime.front(); class_lifetime.pop();
                 translate_required.emplace(
                     VirtualAddress::process_page_id,
                     process_page.milestone(),
@@ -1358,7 +1312,8 @@ void Process::load_patch(
                 process_page.emplace_top(TFlag<Class>,
                     NamedType{{obj.super.super.super,
                         obj.super.super.instance_size,
-                        cons, des},
+                        base_object_addr.id_shift(obj.super.super.maker.id()),
+                        base_object_addr.id_shift(obj.super.super.collector.id()),},
                     string_base_addr.id_shift(obj.super.name.id())},
                     class_member_addr.id_shift(obj.members.id()),
                     class_ext_addr.id_shift(obj.methods.id()),
@@ -1378,7 +1333,7 @@ void Process::load_patch(
                 process_page.placeholder_push(t.super.instance_size);
                 auto repr = &process_page.ref_top<UByte>();
                 *reinterpret_cast<RTTObject*&>(repr) ++ = {tp};
-                for (const Char ch: obj)
+                for (const Char ch: obj.v)
                     *reinterpret_cast<Char*&>(repr) ++ = ch;
             }
             else std::unreachable();
@@ -1391,10 +1346,10 @@ void Process::load_patch(
         std::visit([&]<typename T>(const T v) {
             if constexpr (std::same_as<T, VirtualAddress>)
                 if (v.is_reserved()) {
-                    thread.eval_stack.emplace(TFlag<VirtualAddress>, base_object_addr.id_shift(v.id()));
+                    thread.eval_deque.emplace_front(TFlag<VirtualAddress>, base_object_addr.id_shift(v.id()));
                     return;
                 }
-            thread.eval_stack.emplace(TFlag<T>, v);
+            thread.eval_deque.emplace_front(TFlag<T>, v);
         }, params.top());
         params.pop();
     }
@@ -1417,7 +1372,4 @@ void Process::load_patch(
         if (va.is_reserved())
             va = base_object_addr.id_shift(va.id());
     }
-
-    for (auto& lib: extern_libs)
-        libraries.emplace_back(std::move(lib));
 }

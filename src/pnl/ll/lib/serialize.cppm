@@ -78,6 +78,7 @@ export namespace pnl::ll::inline serialize{
     template<typename T>
     requires Delegatable<T>
         && Serializable<typename T::Delegated>
+        && !std::is_const_v<T>
     struct Serializer<T> final: Serializer<> {
         using D = typename T::Delegated;
         constexpr static bool functional = Serializer<D>::functional;
@@ -135,8 +136,6 @@ export namespace pnl::ll::inline serialize{
 
         // enable only non-const
         void deserialize(BIStream& is) const noexcept {
-            if constexpr (std::is_const_v<T>)
-                std::unreachable();
             UByte repr[sizeof(RInt)]{};
             is.read(repr, sizeof(T));
             RInt v = 0;
@@ -153,8 +152,10 @@ export namespace pnl::ll::inline serialize{
                 stop = sizeof(T);
             }
 
-            for (auto i = start; i != stop; i += step)
-                v = (v | repr[i]) << 1;
+            for (auto i = start; i != stop; i += step) {
+                v <<= 8;
+                v |= repr[i];
+            }
 
             bind = reinterpret_cast<const value_type&>(v);
         }
@@ -245,7 +246,7 @@ export namespace pnl::ll::inline serialize{
         void serialize(BOStream& os) const noexcept {
             os << Serializer<const USize>{bind.size()};
 
-            for (auto& elem: bind)
+            for (const auto& elem: bind)
                 os << Serializer<const T>{elem};
         }
 
@@ -309,7 +310,7 @@ export namespace pnl::ll::inline serialize{
                 os << Serializer<const T>{elem};
         }
 
-        void deserialize(BIStream& is) noexcept  {
+        void deserialize(BIStream& is) const noexcept  {
             USize size;
 
             is >> Serializer<USize>{size};
@@ -340,10 +341,10 @@ export namespace pnl::ll::inline serialize{
                 os << Serializer<const U>{elem.second};
             }
         }
-        void deserialize(BIStream& is) noexcept {
+        void deserialize(BIStream& is) const noexcept {
             USize size;
             is >> Serializer<USize>{size};
-            for (auto& elem: bind) {
+            for (auto [[maybe_unused]]_: std::views::iota(0u, size)) {
                 T key{};
                 U value{};
                 is >> Serializer<T>{key};
@@ -366,7 +367,7 @@ export namespace pnl::ll::inline serialize{
             os << Serializer<Map<T, U>>{bind.t2u};
         }
 
-        void deserialize(BIStream& is) noexcept {
+        void deserialize(BIStream& is) const noexcept {
             bind.clear();
             is >> Serializer<Map<T, U>>{bind.t2u};
             for (auto& [k, v]: bind.t2u)
@@ -413,7 +414,7 @@ export namespace pnl::ll::inline serialize{
             }
         }
 
-        void deserialize(BIStream& is) noexcept {
+        void deserialize(BIStream& is) const noexcept {
             while (!bind.empty())
                 bind.pop();
 
@@ -441,13 +442,19 @@ export namespace pnl::ll::inline serialize{
         void serialize(BOStream& os) const noexcept {
             auto v = bind;
             os << Serializer<const USize>{v.size()};
-            while (!v.empty()){
-                os << Serializer<const T>{v.front()};
+            auto o = Stack<T>{};
+            while (!v.empty()) {
+                o.emplace(std::move(v.top()));
                 v.pop();
+            }
+            
+            while (!o.empty()){
+                os << Serializer<const T>{o.top()};
+                o.pop();
             }
         }
 
-        void deserialize(BIStream& is) noexcept {
+        void deserialize(BIStream& is) const noexcept {
             while (!bind.empty())
                 bind.pop();
 
@@ -476,8 +483,8 @@ export namespace pnl::ll::inline serialize{
                 os << Serializer<const T>{std::get<I>(bind)};
             });
         }
-        void deserialize(BIStream& is) noexcept {
-            TypePack<Ts>::foreach([&]<typename T>(const USize index) {
+        void deserialize(BIStream& is) const noexcept {
+            TypePack<Ts...>::foreach([&]<typename T, std::size_t index>() {
                 is >> Serializer<T>{std::get<index>(bind)};
             });
         }
@@ -497,11 +504,11 @@ export namespace pnl::ll::inline serialize{
 
         void serialize(BOStream& os) const noexcept {
             os << Serializer<const K>{bind.first};
-            os << Serializer<const V>{bind.first};
+            os << Serializer<const V>{bind.second};
         }
-        void deserialize(BIStream& is) noexcept {
+        void deserialize(BIStream& is) const noexcept {
             is >> Serializer<K>{bind.first};
-            is >> Serializer<V>{bind.first};
+            is >> Serializer<V>{bind.second};
         }
     };
 
@@ -524,7 +531,7 @@ export namespace pnl::ll::inline serialize{
                 os << Serializer<const T>{v};
             }, bind);
         }
-        void deserialize(BIStream& is) noexcept {
+        void deserialize(BIStream& is) const noexcept {
             USize idx;
             is >> Serializer<USize>{idx};
 

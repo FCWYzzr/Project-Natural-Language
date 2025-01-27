@@ -1,26 +1,3 @@
-export invisible class "RTUObject" {}
-
-export invisible class "RTTObject" {
-    .type       "::address"
-}
-
-export class "Type" {
-    .size       "::long"
-    .maker      "::address"
-    .collector  "::address"
-}
-
-export class "NamedType" extends "::Type" {
-    .name       "::address"
-}
-
-export class "Class" extends "::NamedType" {
-    .members         "::address"
-    .methods         "::address"
-    .static_members  "::address"
-    .static_methods  "::address"
-}
-
 export type "unit"    = byte[0]
 export type "bool"    = byte[1]
 export type "byte"    = byte[1]
@@ -32,222 +9,256 @@ export type "double"  = byte[8]
 export type "address" = byte[8]
 export type "instruction" = byte[4]
 
-export class "FFamily" extends "::RTTObject" {
-    .base_addr  "::address"
-    .overrides  "::address"
+export invisible class "RTUObject" {}
+
+export invisible class "RTTObject" {
+    .type       "core::address"
 }
 
-export class "FOverride" extends "::Type" {
-    .param_types    "::address"
-    .return_type    "::address"
+export class "Type" {
+    .size       "core::long"
+    .maker      "core::address"
+    .collector  "core::address"
+}
+
+export class "NamedType" extends "core::Type" {
+    .name       "core::address"
+}
+
+export class "Class" extends "core::NamedType" {
+    .members         "core::address"
+    .methods         "core::address"
+    .static_members  "core::address"
+    .static_methods  "core::address"
+}
+
+
+export class "FFamily" extends "core::RTTObject" {
+    .base_addr  "core::address"
+    .overrides  "core::address"
+}
+
+export class "FOverride" extends "core::Type" {
+    .param_types    "core::address"
+    .return_type    "core::address"
 
     func "maker"
     func "collector"
 }
 
-export class "ArrayType" extends "::Type" {
-    .element_type   "::address"
-    .length         "::long"
+export class "Array" extends "core::Type" {
+    .element_type   "core::address"
+    .length         "core::long"
 
     func "maker"
     func "collector"
 }
 
 export invisible class "MemberInfo" {
-    .name   "::address"
-    .type   "::address"
-    .offset "::long"
+    .name   "core::address"
+    .type   "core::address"
+    .offset "core::long"
 }
 
 export func {
-    param ["::address"]
-    implement "RTUObject::()"
+    param ["core::address"]
+    implement "core::RTUObject::()"
 } as "RTUObject::()"
 export func {
-    param ["::address"]
-    implement "RTUObject::~()"
+    param ["core::address"]
+    implement "core::RTUObject::~()"
 } as "RTUObject::~()"
 
 export func {
-    param ["::address"]
-    implement "RTTObject::()"
+    param ["core::address", "core::address"]
+    implement "core::RTTObject::()"
 } as "RTTObject::()"
 export func {
-    param ["::address"]
-    implement "RTTObject::~()"
+    param ["core::address"]
+    implement "core::RTTObject::~()"
 } as "RTTObject::~()"
 
 export func {
-    param ["::address", "::long", "::address", "::address"]
-    implement "Type::()"
+    param ["core::address", "core::address", "core::long", "core::address", "core::address"]
+    implement "core::Type::()"
 } as "Type::()"
 export func {
-    param ["::address"]
-    implement "Type::~()"
+    param ["core::address"]
+    implement "core::Type::~()"
 } as "Type::~()"
 
 export func {
-    param ["::address", "::address", "::long"]
-    implement "ArrayType::()"
-} as "ArrayType::()"
+    param ["core::address", "core::address", "core::address", "core::long"]
+    implement "core::Array::()"
+} as "Array::()"
 export func {
-    param ["::address"]
-    implement "ArrayType::~()"
-} as "ArrayType::~()"
+    param ["core::address"]
+    implement "core::Array::~()"
+} as "Array::~()"
 export func {
-    param ["::address"]
-    implement "ArrayType::maker"
-} as "ArrayType::maker"
+    param ["core::address", "core::address"]
+    implement "core::Array::maker"
+} as "Array::maker"
 export func {
-    param ["::address"]
-    implement "ArrayType::collector"
-} as "ArrayType::collector"
+    param ["core::address", "core::address"]
+    implement "core::Array::collector"
+} as "Array::collector"
 
 export func {
-    param ["::address", "::long", "::address", "::address", "::address"]
-    implement "NamedType::()"
+    param ["core::address", "core::address", "core::long", "core::address", "core::address", "core::address"]
+    implement "core::NamedType::()"
 } as "NamedType::()"
 export func {
-    param ["::address"]
-    implement "NamedType::~()"
+    param ["core::address"]
+    implement "core::NamedType::~()"
 } as "NamedType::~()"
 
 export func {
-    param ["::address", "::address", "::address", "::long"]
-    implement "MemberInfo::()"
+    param ["core::address", "core::address", "core::address", "core::address", "core::long"]
+    implement "core::MemberInfo::()"
 } as "MemberInfo::()"
 export func {
-    param ["::address"]
-    implement "MemberInfo::~()"
+    param ["core::address"]
+    implement "core::MemberInfo::~()"
 } as "MemberInfo::~()"
 
 export func {
-    param ["::address", "::long", "::address", "::address", "::address", "::address", "::address", "::address", "::address"]
-    implement "Class::()"
+    param ["core::address", "core::address", "core::long", "core::address", "core::address", "core::address", "core::address", "core::address", "core::address", "core::address"]
+    implement "core::Class::()"
 } as "Class::()"
 export func {
-    param ["::address"]
-    implement "Class::~()"
+    param ["core::address"]
+    implement "core::Class::~()"
 } as "Class::~()"
 
 export func {
-    param ["::address", "::bool", "::address"]
-    implement "FOverride::()"
+    param ["core::address", "core::address", "core::bool", "core::address"]
+    implement "core::FOverride::()"
 } as "FOverride::()"
 
 export func {
-    param ["::address"]
-    implement "FOverride::~()"
+    param ["core::address"]
+    implement "core::FOverride::~()"
 } as "FOverride::~()"
 
 export func {
-    param ["::address", "::address", "::address"]
-    implement "FFamily::()"
+    param ["core::address", "core::address", "core::bool", "core::address"]
+    implement "core::FOverride::maker"
+} as "FOverride::maker"
+
+export func {
+    param ["core::address", "core::address"]
+    implement "core::FOverride::collector"
+} as "FOverride::collector"
+
+export func {
+    param ["core::address", "core::address", "core::address", "core::address"]
+    implement "core::FFamily::()"
 } as "FFamily::()"
 
 export func {
-    param ["::address"]
-    implement "FFamily::~()"
+    param ["core::address"]
+    implement "core::FFamily::~()"
 } as "FFamily::~()"
 
 export func {
-    param ["::address"]
-    implement "unit::()"
+    param ["core::address"]
+    implement "core::unit::()"
 } as "unit::()"
 
 export func {
-    param ["::address"]
-    implement "unit::~()"
+    param ["core::address"]
+    implement "core::unit::~()"
 } as "unit::~()"
 
 export func {
-    param ["::address", "::bool"]
-    implement "bool::()"
+    param ["core::address", "core::bool"]
+    implement "core::bool::()"
 } as "bool::()"
 
 export func {
-    param ["::address"]
-    implement "bool::~()"
+    param ["core::address"]
+    implement "core::bool::~()"
 } as "bool::~()"
 
 export func {
-    param ["::address", "::byte"]
-    implement "byte::()"
+    param ["core::address", "core::byte"]
+    implement "core::byte::()"
 } as "byte::()"
 
 export func {
-    param ["::address"]
-    implement "byte::~()"
+    param ["core::address"]
+    implement "core::byte::~()"
 } as "byte::~()"
 
 export func {
-    param ["::address", "::char"]
-    implement "char::()"
+    param ["core::address", "core::char"]
+    implement "core::char::()"
 } as "char::()"
 
 export func {
-    param ["::address"]
-    implement "char::~()"
+    param ["core::address"]
+    implement "core::char::~()"
 } as "char::~()"
 
 export func {
-    param ["::address", "::int"]
-    implement "int::()"
+    param ["core::address", "core::int"]
+    implement "core::int::()"
 } as "int::()"
 
 export func {
-    param ["::address"]
-    implement "int::~()"
+    param ["core::address"]
+    implement "core::int::~()"
 } as "int::~()"
 
 export func {
-    param ["::address", "::long"]
-    implement "long::()"
+    param ["core::address", "core::long"]
+    implement "core::long::()"
 } as "long::()"
 
 export func {
-    param ["::address"]
-    implement "long::~()"
+    param ["core::address"]
+    implement "core::long::~()"
 } as "long::~()"
 
 export func {
-    param ["::address", "::float"]
-    implement "float::()"
+    param ["core::address", "core::float"]
+    implement "core::float::()"
 } as "float::()"
 
 export func {
-    param ["::address"]
-    implement "float::~()"
+    param ["core::address"]
+    implement "core::float::~()"
 } as "float::~()"
 
 export func {
-    param ["::address", "::double"]
-    implement "double::()"
+    param ["core::address", "core::double"]
+    implement "core::double::()"
 } as "double::()"
 
 export func {
-    param ["::address"]
-    implement "double::~()"
+    param ["core::address"]
+    implement "core::double::~()"
 } as "double::~()"
 
 export func {
-    param ["::address", "::address"]
-    implement "address::()"
+    param ["core::address", "core::address"]
+    implement "core::address::()"
 } as "address::()"
 
 export func {
-    param ["::address"]
-    implement "address::~()"
+    param ["core::address"]
+    implement "core::address::~()"
 } as "address::~()"
 
 export func {
-    param ["::address", "::byte", "::int"]
-    implement "instruction::()"
+    param ["core::address", "core::byte", "core::int"]
+    implement "core::instruction::()"
 } as "instruction::()"
 
 export func {
-    param ["::address"]
-    implement "instruction::~()"
+    param ["core::address"]
+    implement "core::instruction::~()"
 } as "instruction::~()"
 
 

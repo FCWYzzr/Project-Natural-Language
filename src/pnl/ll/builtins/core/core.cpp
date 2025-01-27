@@ -14,13 +14,13 @@ using namespace pnl::ll;
 namespace RTUObject {
     void maker(Thread& thr) noexcept {
         // pop RTUObject cls
-        thr.eval_stack.pop();
+        thr.eval_deque.pop_front();
         // pop RTUObject this
-        thr.eval_stack.pop();
+        thr.eval_deque.pop_front();
     }
     void collector(Thread& thr) noexcept {
         // pop RTUObject this
-        thr.eval_stack.pop();
+        thr.eval_deque.pop_front();
     }
 }
 
@@ -35,7 +35,7 @@ namespace RTTObject {
     }
     void collector(Thread& thr) noexcept {
         // pop RTTObject this
-        thr.eval_stack.pop();
+        thr.eval_deque.pop_front();
     }
 }
 
@@ -59,7 +59,7 @@ namespace Type {
     }
     void collector(Thread& thr) noexcept {
         // pop Type this
-        thr.eval_stack.pop();
+        thr.eval_deque.pop_front();
     }
 }
 
@@ -85,11 +85,11 @@ namespace NamedType {
     }
     void collector(Thread& thr) noexcept {
         // pop NamedType this
-        thr.eval_stack.pop();
+        thr.eval_deque.pop_front();
     }
 }
 
-namespace ArrayType {
+namespace Array {
     void maker(Thread& thr) noexcept {
         const auto n_type_cls_addr = std::get<VirtualAddress>(thr.take());
         const auto n_type_this_addr = std::get<VirtualAddress>(thr.take());
@@ -112,10 +112,10 @@ namespace ArrayType {
         };
     }
     void collector(Thread& thr) noexcept {
-        thr.eval_stack.pop();
+        thr.eval_deque.pop_front();
     }
 
-    void generic_constructor(Thread& thr) noexcept {
+    void inst_maker(Thread& thr) noexcept {
         const auto this_addr = std::get<VirtualAddress>(thr.take());
         const auto& arr_type = thr.deref<runtime::ArrayType>(this_addr);
         const auto& elem_type = thr.deref<runtime::Type>(arr_type.elem_type);
@@ -124,7 +124,7 @@ namespace ArrayType {
         thr.deref<runtime::RTTObject>(place) = {this_addr};
 
         for (const auto i: std::views::iota(0, arr_type.length)) {
-            thr.eval_stack.emplace(TFlag<VirtualAddress>,
+            thr.eval_deque.emplace_front(TFlag<VirtualAddress>,
                 place.offset_shift(
                     sizeof(runtime::RTTObject) + i * elem_type.instance_size
                 )
@@ -132,14 +132,14 @@ namespace ArrayType {
             thr.call_function(thr.deref<FFamily>(elem_type.maker), 0);
         }
     }
-    void generic_destructor(Thread& thr) noexcept {
+    void inst_collector(Thread& thr) noexcept {
         const auto place = std::get<VirtualAddress>(thr.take());
         const auto& inst = thr.deref<runtime::RTTObject>(place);
         const auto& arr_type = thr.deref<runtime::ArrayType>(inst.type);
         const auto& elem_type = thr.deref<runtime::Type>(arr_type.elem_type);
 
         for (const auto i: std::views::iota(0, arr_type.length)) {
-            thr.eval_stack.emplace(TFlag<VirtualAddress>,
+            thr.eval_deque.emplace_front(TFlag<VirtualAddress>,
                 place.offset_shift(
                     sizeof(runtime::RTTObject) + i * elem_type.instance_size
                 )
@@ -166,7 +166,7 @@ namespace MemberInfo {
         };
     }
     void collector(Thread& thr) noexcept {
-        thr.eval_stack.pop();
+        thr.eval_deque.pop_front();
     }
 }
 
@@ -202,7 +202,7 @@ namespace Class {
     }
     void collector(Thread& thr) noexcept {
         // pop NamedType this
-        thr.eval_stack.pop();
+        thr.eval_deque.pop_front();
     }
 }
 
@@ -215,7 +215,7 @@ static void maker(Thread& thr) noexcept {
 
 template<typename T>
 static void collector(Thread& thr) noexcept {
-    thr.eval_stack.pop();
+    thr.eval_deque.pop_front();
 }
 
 #define OP(TYPE) \
@@ -266,7 +266,7 @@ namespace Instruction {
 
     }
     void collector(Thread& thr) noexcept{
-        thr.eval_stack.pop();
+        thr.eval_deque.pop_front();
     }
 }
 
@@ -289,7 +289,24 @@ namespace FOverride {
     }
     void collector(Thread& thr) noexcept {
         // pop FFamily this
-        thr.eval_stack.pop();
+        thr.eval_deque.pop_front();
+    }
+    void inst_maker(Thread& thr) noexcept {
+        const auto type_inst_addr = std::get<VirtualAddress>(thr.take());
+        auto place_addr = std::get<VirtualAddress>(thr.take());
+        auto native = std::get<base::Bool>(thr.take());
+        auto proc = std::get<VirtualAddress>(thr.take());
+
+        new (&thr.deref<>(place_addr)) runtime::FOverride {
+            runtime::RTTObject{type_inst_addr},
+            native,
+            proc.content
+        };
+
+
+    }
+    void inst_collector(Thread& thr) noexcept {
+        thr.eval_deque.pop_front();
     }
 }
 
@@ -311,7 +328,7 @@ namespace FFamily {
     }
     void collector(Thread& thr) noexcept {
         // pop FFamily this
-        thr.eval_stack.pop();
+        thr.eval_deque.pop_front();
     }
 }
 

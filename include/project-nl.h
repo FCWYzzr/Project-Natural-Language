@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <dlfcn.h>
 #include <filesystem>
+#include <fstream>
 #include <functional>
 #include <iostream>
 #include <memory>

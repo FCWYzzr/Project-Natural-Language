@@ -34,6 +34,14 @@ export namespace pnl::ll::inline collections{
 
             Stack(Stack&& other) noexcept;
 
+            Stack & operator=(Stack &&other) noexcept {
+                if (this == &other)
+                    return *this;
+                obj_offset = std::move(other.obj_offset);
+                dense_pool = std::move(other.dense_pool);
+                return *this;
+            }
+
             ~Stack() noexcept = default;
 
             template<typename T, typename... Args>

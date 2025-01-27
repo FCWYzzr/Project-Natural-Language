@@ -1,13 +1,13 @@
 export func [
     {
-        param ["::char"]
-        implement "write::0"
+        param ["core::char"]
+        implement "io::write::0"
     }
 ] as "write"
 
 export func [
     {
-        param ["::address"]
-        implement "println::0"
+        param ["core::address"]
+        implement "io::println::0"
     }
 ] as "println"

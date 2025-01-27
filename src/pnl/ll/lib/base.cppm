@@ -11,10 +11,10 @@ export namespace pnl::ll::inline meta_prog{
         static std::variant<T, Ts...>
             construct(const std::size_t idx) {
             if (idx == 0) [[unlikely]]
-                return {std::in_place_type<T>};
+                return std::variant<T, Ts...>{std::in_place_type<T>};
             if constexpr (sizeof...(Ts) > 0)
                 return std::visit([]<typename U>(U&& v) -> std::variant<T, Ts...> {
-                    return {std::in_place_type<U>, v};
+                    return std::variant<T, Ts...>{std::in_place_type<U>, v};
                 }, TypePack<Ts...>::construct(idx - 1));
             else
                 std::unreachable();
@@ -162,8 +162,9 @@ export namespace pnl::ll::inline base_traits{
 }
 
 export namespace pnl::ll::inline codecvt{
-    auto ntv_encoding = "UTF-8";
-    constexpr auto vm_encoding = "UTF-32LE";
+    constexpr char ntv_encoding[]   = "UTF-8";
+    constexpr char vm_encoding[]    = "UTF-32LE";
+
 
     PNL_LIB_PREFIX
     Str cvt(const std::string& in, MManager& mem) noexcept;
@@ -173,7 +174,7 @@ export namespace pnl::ll::inline codecvt{
     MBStr cvt(const Str& in) noexcept;
 
     PNL_LIB_PREFIX
-    std::size_t code_cvt(char* out, std::size_t out_size, const char* in, std::size_t in_size, const char* code_in, const char* code_out) noexcept;
+    std::size_t code_cvt(char* out, std::size_t out_size, const char* in, std::size_t in_size, const char* code_in, const char* code_out, MManager* mem) noexcept;
 }
 
 export namespace pnl::ll::inline conditions{
@@ -386,6 +387,9 @@ export namespace pnl::ll::inline vm{
         WILD_NEW,
         WILD_COLLECT,
 
+        ALL(FROM_REF_LOAD),
+        ALL(TO_REF_STORE),
+
 
         DESTROY,
 
@@ -407,8 +411,6 @@ export namespace pnl::ll::inline vm{
         ALL(F_STORE),
         P_REF_AT,
         T_REF_AT,
-        ALL(FROM_REF_LOAD),
-        ALL(TO_REF_STORE),
 
         REF_MEMBER,
         REF_STATIC_MEMBER,
@@ -426,6 +428,9 @@ export namespace pnl::ll::inline vm{
     struct alignas(std::uint32_t)
     Instruction{
         std::uint32_t content;
+
+        Instruction() noexcept:
+        content(0xffffffffu){}
 
         Instruction(
             const OPCode opcode,

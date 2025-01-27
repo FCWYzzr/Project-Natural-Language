@@ -24,7 +24,6 @@ void pnl::ll::conditions::assert(const bool condition, const MBStr &err_desc) no
 pnl::ll::Str pnl::ll::codecvt::cvt(const std::string &in, MManager &mem) noexcept {
     return cvt(MBStr{in.c_str(), &mem});
 }
-
 pnl::ll::Str pnl::ll::codecvt::cvt(const MBStr &in) noexcept {
     auto s = Str{in.get_allocator()};
     s.reserve(in.size()+1);
@@ -32,7 +31,8 @@ pnl::ll::Str pnl::ll::codecvt::cvt(const MBStr &in) noexcept {
         return code_cvt(
             reinterpret_cast<char*>(buf), buf_size * sizeof(Char),
             in.data(), in.size(),
-            ntv_encoding, vm_encoding
+            ntv_encoding, vm_encoding,
+            in.get_allocator().resource()
         ) / sizeof(Char);
     });
     return s;
@@ -44,17 +44,19 @@ pnl::ll::MBStr pnl::ll::codecvt::cvt(const Str &in) noexcept {
         return code_cvt(
             buf, buf_size,
             reinterpret_cast<const char*>(in.data()), in.length() * sizeof(Char),
-            vm_encoding, ntv_encoding);
+            vm_encoding, ntv_encoding,
+            in.get_allocator().resource()
+        );
     });
     return s;
 }
 
-std::size_t pnl::ll::codecvt::code_cvt(char* out, std::size_t out_size, const char* in, std::size_t in_size, const char* code_in, const char* code_out) noexcept {
+std::size_t pnl::ll::codecvt::code_cvt(char* out, std::size_t out_size, const char* in, std::size_t in_size, const char* code_in, const char* code_out, MManager* mem) noexcept {
     const auto codecvt = iconv_open(code_out, code_in);
     const auto out_ori = out_size;
 
-    assert(reinterpret_cast<intptr_t>(codecvt) != -1, "iconv fail to open");
-    assert(iconv(codecvt, &const_cast<char*&>(in), &in_size, &out, &out_size) != -1, "iconv fail to cvt");
+    assert(reinterpret_cast<intptr_t>(codecvt) != -1, {"iconv fail to open", mem});
+    iconv(codecvt, &const_cast<char*&>(in), &in_size, &out, &out_size);
 
     iconv_close(codecvt);
 

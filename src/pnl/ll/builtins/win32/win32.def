@@ -1,0 +1,4 @@
+LIBRARY nlrt_win32
+EXPORTS
+    win32::MessageBox::0=?standalone_override_0@FMessageBox@@YAXAEAUThread@runtime@ll@pnl@@@Z @1
+

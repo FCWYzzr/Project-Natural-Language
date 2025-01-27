@@ -14,7 +14,7 @@ using namespace pnl::ll::runtime::execute;
 
 
 std::uint8_t VirtualAddress::page() const noexcept {
-    return (content  >> 48) % 0xf;
+    return (content  >> 48) & 0xf;
 }
 
 std::uint32_t VirtualAddress::id() const noexcept {
@@ -51,17 +51,13 @@ std::strong_ordering VirtualAddress::operator<=>(const VirtualAddress other) con
 
 [[nodiscard]]
 static Class& vm__top_obj_type(Thread&) noexcept;
-static std::variant<FuncContext, NtvFunc>&
-cur_func(Thread& thr) noexcept {
-    if (thr.init_queue.empty())
-        return thr.call_stack.top();
-    return thr.init_queue.front();
+static auto&
+    cur_func(Thread& thr) noexcept {
+    return thr.call_deque.front();
 }
 static void
 pop_func(Thread& thr) noexcept {
-    if (thr.init_queue.empty())
-        return thr.call_stack.pop();
-    return thr.init_queue.pop();
+    return thr.call_deque.pop_front();
 }
 static void cast(Thread&, Instruction) noexcept;
 static void cmp(Thread&) noexcept;
@@ -102,6 +98,16 @@ static void invoke_override(Thread&, Instruction) noexcept;
 static void instate(Thread&, Instruction) noexcept;
 static void destroy(Thread&) noexcept;
 
+
+template<typename T>
+static T ushr(const T a, const T b) noexcept {
+    auto ret = a >> b;
+    if (a < 0)
+        ret &= ~(1 << (sizeof(T) - 1));
+    return ret;
+}
+
+
 Process::Process(MManager* const upstream):
     process_memory{
         upstream
@@ -120,13 +126,18 @@ void Process::resume() const noexcept {
         thr.resume();
 }
 
+void Process::terminate() noexcept {
+    for (auto& thr: threads)
+        thr.terminate();
+}
+
 VirtualAddress Process::get_vr(const std::uint8_t thread_id, const std::uint32_t object_offset) noexcept {
     return VirtualAddress{thread_id, object_offset};
 }
 
 Thread & Process::get_available_thread() noexcept {
     for (auto& thr: threads)
-        if (thr.call_stack.empty())
+        if (thr.call_deque.empty())
             return thr;
     threads.emplace_back(this, static_cast<std::uint8_t>(threads.size()));
     return threads.back();
@@ -164,7 +175,7 @@ void Process::wild_collect(const VirtualAddress va) noexcept {
 }
 
 Class& vm__top_obj_type(Thread& thr) noexcept {
-    const auto& [type] = thr.deref<RTTObject>(std::get<VirtualAddress>(thr.eval_stack.top()));
+    const auto& [type] = thr.deref<RTTObject>(std::get<VirtualAddress>(thr.eval_deque.front()));
     return thr.deref<Class>(type);
 }
 
@@ -174,9 +185,9 @@ Thread::Thread(
     step_token{0},
     process{process},
     thread_id{thread_id},
-    call_stack{&process->process_memory},
+    call_deque{&process->process_memory},
+    eval_deque{&process->process_memory},
     thread_page{&process->process_memory},
-    eval_stack{&process->process_memory},
     native_handler{std::function{[this](const std::stop_token &token){
         run(token);
     }}}{}
@@ -185,9 +196,9 @@ Thread::Thread(Thread &&other) noexcept:
     step_token{0},
     process(other.process),
     thread_id(other.thread_id),
-    call_stack(std::move(other.call_stack)),
+    call_deque(std::move(other.call_deque)),
+    eval_deque(std::move(other.eval_deque)),
     thread_page(std::move(other.thread_page)),
-    eval_stack(std::move(other.eval_stack)),
     native_handler(std::move(other.native_handler)) {
 }
 
@@ -203,25 +214,35 @@ void Thread::resume() const noexcept {
     step_token.release();
 }
 
+void Thread::terminate() noexcept {
+    if (native_handler.joinable()) {
+        native_handler.get_stop_source().request_stop();
+        auto [[maybe_unused]]_ = step_token.try_acquire();
+        step_token.release();
+        native_handler.join();
+    }
+}
+
+Thread::~Thread() noexcept { // NOLINT(*-use-equals-default)
+    terminate();
+}
+
 void Thread::call_function(const FFamily &family, const std::uint32_t override_id) noexcept {
     if (const auto& override = deref<Array<FOverride>>(family.overrides)[override_id];
         override.is_native) [[unlikely]]
         override.ntv()(*this);
     else
-        call_stack.emplace(
+        call_deque.emplace_front(
             TFlag<FuncContext>,
             thread_page.milestone(),
             family.base_addr,
-            override.vm(),
-            *process
+            override.vm()
         );
 }
 
 void Thread::clear() noexcept {
-    while (!eval_stack.empty())
-        eval_stack.pop();
-    while (!call_stack.empty())
-        call_stack.pop();
+    call_deque.clear();
+    eval_deque.clear();
     thread_page.waste_since(0);
 }
 
@@ -233,14 +254,20 @@ VirtualAddress Thread::function_memory_base() noexcept {
     return {thread_id, current_proc().milestone};
 }
 
+Value Thread::take() noexcept {
+    auto top = std::move(eval_deque.front());
+    eval_deque.pop_front();
+    return std::move(top);
+}
+
 void Thread::run(const std::stop_token &token) noexcept {
     step_token.acquire();
     step_token.release();
     while (true){
-        if (call_stack.empty() && init_queue.empty())
-            return;
         if (is_daemon && token.stop_requested())
-            return;
+            break;
+        if (call_deque.empty())
+            break;
 
         step_token.acquire();
         if (cur_func(*this).index() != 0) [[unlikely]] {
@@ -251,7 +278,8 @@ void Thread::run(const std::stop_token &token) noexcept {
         else [[likely]]
             step();
         step_token.release();
-    };
+    }
+    is_done = true;
 }
 
 #define INTEGRAL(prefix) \
@@ -272,13 +300,13 @@ case prefix##_REF
 
 using enum OPCode;
 void Thread::step() noexcept {
-    const auto inst = *current_proc();
+    const auto inst = current_proc().decode(*process);
     ++ current_proc();
     switch (inst.opcode()) {
         case NOP:
             break;
         case WASTE:
-            eval_stack.pop();
+            eval_deque.pop_front();
             break;
         case CAST_C2I:
         case CAST_B2I:
@@ -420,7 +448,7 @@ void Thread::step() noexcept {
 
 
 
-Instruction FuncContext::operator * () const noexcept {
+Instruction FuncContext::decode(Process& process) const noexcept {
     return process.deref<Array<Instruction>>(instructions)[program_counter];
 }
 
@@ -435,7 +463,7 @@ void stack_alloc(Thread& thr) noexcept {
         thr.thread_page.milestone()
     };
     thr.thread_page.placeholder_push(std::get<Int>(thr.take()));
-    thr.eval_stack.emplace(TFlag<VirtualAddress>, base);
+    thr.eval_deque.emplace_front(TFlag<VirtualAddress>, base);
 }
 void stack_new(Thread& thr) noexcept {
     auto base = VirtualAddress{
@@ -443,7 +471,7 @@ void stack_new(Thread& thr) noexcept {
         thr.thread_page.milestone()
     };
     thr.thread_page.placeholder_push(std::get<Int>(thr.take()));
-    thr.eval_stack.emplace(TFlag<VirtualAddress>, base);
+    thr.eval_deque.emplace_front(TFlag<VirtualAddress>, base);
 }
 
 
@@ -519,7 +547,7 @@ void cast(Thread& thr, const Instruction inst) noexcept {
             std::unreachable();
     }
     // ReSharper restore CppDFAUnusedValue
-    thr.eval_stack.push(v);
+    thr.eval_deque.emplace_front(v);
 }
 
 void cmp(Thread& thr) noexcept {
@@ -537,15 +565,16 @@ void cmp(Thread& thr) noexcept {
     }, top1);
 
     if (ret < 0)
-        thr.eval_stack.emplace(TFlag<Int>, -1);
+        thr.eval_deque.emplace_front(TFlag<Int>, -1);
     else if (ret > 0)
-        thr.eval_stack.emplace(TFlag<Int>, 1);
+        thr.eval_deque.emplace_front(TFlag<Int>, 1);
     else
-        thr.eval_stack.emplace(TFlag<Int>, 0);
+        thr.eval_deque.emplace_front(TFlag<Int>, 0);
 }
 
 void invoke_top(Thread& thr) noexcept {
-    const auto& ref = thr.deref<FFamily>(std::get<VirtualAddress>(thr.take()));
+    const auto place =  std::get<VirtualAddress>(thr.take());
+    const auto& ref = thr.deref<FFamily>(place);
     thr.call_function(ref, 0);
 }
 
@@ -561,7 +590,7 @@ void end_proc(Thread& thr) noexcept {
 }
 
 void wild_alloc(Thread& thr) noexcept {
-    thr.eval_stack.emplace(TFlag<VirtualAddress>,
+    thr.eval_deque.emplace_front(TFlag<VirtualAddress>,
         thr.process->wild_alloc(
             std::get<Int>(thr.take())
         )
@@ -574,7 +603,7 @@ void wild_new(Thread& thr) noexcept {
     // ReSharper disable once CppDFAUnusedValue
     const auto o_id = std::get<Int>(thr.take());
 
-    thr.eval_stack.emplace(TFlag<VirtualAddress>, thr.process->wild_alloc(tp.super.super.instance_size));
+    thr.eval_deque.emplace_front(TFlag<VirtualAddress>, thr.process->wild_alloc(tp.super.super.instance_size));
     thr.call_function(thr.deref<FFamily>(tp.super.super.maker), o_id);
 }
 
@@ -634,7 +663,7 @@ void NAME(Thread& thr) noexcept {\
                 return Value{TFlag<decltype(OP(v1, v2))>, OP(v1, v2)};\
         }, top2);\
     }, top1);\
-    thr.eval_stack.emplace(ret);\
+    thr.eval_deque.emplace_front(ret);\
 }
 #define UNI_VAR_METHOD(NAME, ...)\
 void NAME(Thread& thr) noexcept {\
@@ -647,7 +676,7 @@ void NAME(Thread& thr) noexcept {\
         else\
             return Value{TFlag<decltype(OP(v))>, OP(v)};\
     }, top);\
-    thr.eval_stack.emplace(ret);\
+    thr.eval_deque.emplace_front(ret);\
 }
 
 #define UNI_ALL_METHOD(PREFIX, NAME)\
@@ -710,7 +739,7 @@ UNI_VAR_METHOD(bit_inv, Int, Long)
 #define G_OP
 #define OP(TYPE) {\
             auto& top = thr.deref<TYPE>(thr.process_memory_base().id_shift(inst.arg()));\
-            thr.eval_stack.emplace(TFlag<TYPE>, top);\
+            thr.eval_deque.emplace_front(TFlag<TYPE>, top);\
         }
 UNI_ALL_METHOD(P_LOAD, p_load)
 #undef OP
@@ -722,7 +751,7 @@ UNI_ALL_METHOD(P_STORE, p_store)
 #undef OP
 #define OP(TYPE) {\
             auto& top = thr.deref<TYPE>(thr.function_memory_base().id_shift(inst.arg()));\
-            thr.eval_stack.emplace(TFlag<TYPE>, top);\
+            thr.eval_deque.emplace_front(TFlag<TYPE>, top);\
         }
 UNI_ALL_METHOD(F_LOAD, f_load)
 #undef OP
@@ -736,17 +765,18 @@ UNI_ALL_METHOD(F_STORE, f_store)
 
 
 void p_ref_at(Thread& thr, const Instruction inst) noexcept {
-    thr.eval_stack.emplace(TFlag<VirtualAddress>, thr.process_memory_base().id_shift(inst.arg()));
+    const auto tgt = thr.process_memory_base().id_shift(inst.arg());
+    thr.eval_deque.emplace_front(TFlag<VirtualAddress>, tgt);
 }
 
 
 void f_ref_at(Thread& thr, const Instruction inst) noexcept {
-    thr.eval_stack.emplace(TFlag<VirtualAddress>, thr.function_memory_base().id_shift(inst.arg()));
+    thr.eval_deque.emplace_front(TFlag<VirtualAddress>, thr.function_memory_base().id_shift(inst.arg()));
 }
 
 
 #define G_OP auto target = std::get<VirtualAddress>(thr.take());
-#define OP(TYPE) thr.eval_stack.emplace(TFlag<TYPE>, thr.deref<TYPE>(target));
+#define OP(TYPE) thr.eval_deque.emplace_front(TFlag<TYPE>, thr.deref<TYPE>(target));
 UNI_ALL_METHOD(FROM_REF_LOAD, load_by_ref)
 #undef OP
 #define OP(TYPE) thr.deref<TYPE>(target) = std::get<TYPE>(thr.take());
@@ -759,7 +789,7 @@ void ref_member(
     Thread& thr, const Instruction inst
 ) noexcept {
     const auto offset = thr.deref<Array<MemberInfo>>(vm__top_obj_type(thr).members)[inst.arg()].offset;
-    thr.eval_stack.emplace(TFlag<VirtualAddress>,
+    thr.eval_deque.emplace_front(TFlag<VirtualAddress>,
         std::get<VirtualAddress>(thr.take())
         .offset_shift(static_cast<std::uint16_t>(offset)));
 }
@@ -770,26 +800,25 @@ void ref_static_member(
     const auto& cls = vm__top_obj_type(thr);
     const auto& member_offset = thr.deref<Array<VirtualAddress>>(cls.members)[inst.arg()].offset();
     const auto base = std::get<VirtualAddress>(thr.take());
-    thr.eval_stack.emplace(TFlag<VirtualAddress>, base.offset_shift(member_offset));
+    thr.eval_deque.emplace_front(TFlag<VirtualAddress>, base.offset_shift(member_offset));
 }
 
 void ref_method(Thread& thr, const Instruction inst) noexcept {
     const auto& cls = vm__top_obj_type(thr);
     const auto& method_ref = thr.deref<Array<VirtualAddress>>(cls.methods)[inst.arg()];
-    thr.eval_stack.emplace(TFlag<VirtualAddress>, method_ref);
+    thr.eval_deque.emplace_front(TFlag<VirtualAddress>, method_ref);
 }
 
 void ref_static_method(Thread& thr, const Instruction inst) noexcept {
     const auto& cls = vm__top_obj_type(thr);
     const auto& method_ref = thr.deref<Array<VirtualAddress>>(cls.methods)[inst.arg()];
     // pop 'this', so static method won't receive it
-    thr.eval_stack.pop();
-    thr.eval_stack.emplace(TFlag<VirtualAddress>, method_ref);
+    thr.eval_deque.pop_front();
+    thr.eval_deque.emplace_front(TFlag<VirtualAddress>, method_ref);
 }
 
 void invoke_override(Thread& thr, const Instruction inst) noexcept {
-    const auto ref = std::get<VirtualAddress>(thr.take());
-    const auto& family = thr.deref<FFamily>(ref);
+    const auto& family = thr.deref<FFamily>(std::get<VirtualAddress>(thr.take()));
     thr.call_function(family, inst.arg());
 }
 

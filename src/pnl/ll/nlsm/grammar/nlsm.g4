@@ -121,6 +121,9 @@ EXTENDS
 COMMA
     : ','
     ;
+RETURN_TAG
+    : 'return'
+    ;
 
 fragment SChar
     : ~["\\]
@@ -199,8 +202,8 @@ named_type_value
 
 // func "write" [
 //     {
-//         param [ "::char" ]
-//         return "::unit"
+//         param [ "core::char" ]
+//         return "core::unit"
 //         impl "write::0"
 //     }
 //     ...
@@ -213,7 +216,7 @@ function_value
 override_value
     : LB
          (PARAM params)?
-         (RETURN ret)?
+         (RETURN_TAG ret)?
          IMPLEMENT ((LBK command+ RBK) | STRING)
       RB
     ;
@@ -225,11 +228,11 @@ ret
     : STRING
     ;
 
-// class "Class" extends "::NamedType" {
-//      .members "::address"
-//      .methods "::address"
-//      .static_members "::address"
-//      .static_methods "::address"
+// class "Class" extends "core::NamedType" {
+//      .members "core::address"
+//      .methods "core::address"
+//      .static_members "core::address"
+//      .static_methods "core::address"
 // }
 
 

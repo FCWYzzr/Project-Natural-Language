@@ -92,10 +92,13 @@ file(GLOB_RECURSE nlvm-common-src
     nlvm/common/*.cppm
 )
 
+
+
 add_compile_definitions(
-    ASM_EXT=".nlsm"
-    PKG_EXT=".nlpkg"
-    IMG_EXT=".nlimg"
+    "DLL_EXT=\".${dll_ext}\""
+    "ASM_EXT=\"${ASM_EXT}\""
+    "PKG_EXT=\"${PKG_EXT}\""
+    "IMG_EXT=\"${IMG_EXT}\""
 )
 
 if (${CMAKE_CXX_PLATFORM_ID} STREQUAL Windows)
@@ -107,5 +110,7 @@ endif ()
 install(FILES ${PNL-Lower-Level-interface} DESTINATION "${loc}/module/ll")
 install(TARGETS nl-ll
     RUNTIME DESTINATION "${loc}/bin"
+    ARCHIVE DESTINATION "${loc}/lib"
     LIBRARY DESTINATION "${loc}/lib")
 install(TARGETS nlsm DESTINATION "${loc}/bin")
+install(TARGETS nlim DESTINATION "${loc}/bin")

@@ -26,14 +26,54 @@ export namespace pnl::ll::inline comtime{
     using FFamilyRepr = List<FOverrideRepr>;
 
 
-    using ObjRefRepr = Str;
+    struct ReferenceRepr {
+        using Delegated = Str;
+        Str v;
+
+        ReferenceRepr(Str s={}) noexcept:
+            v(std::move(s)) {}
+
+        bool operator==(const ReferenceRepr &o) const noexcept {
+            return v == o.v;
+        }
+
+        bool operator==(const Str &o) const noexcept {
+            return v == o;
+        }
+        // ReSharper disable once CppNonExplicitConversionOperator
+        operator Str& () & {
+            return v;
+        }
+        operator const Str& () const & {
+            return v;
+        }
+    };
+    struct CharArrayRepr {
+        using Delegated = Str;
+        Str v;
+
+        CharArrayRepr(Str s={}) noexcept:
+            v(std::move(s)) {}
+
+        bool operator==(const CharArrayRepr &o) const noexcept {
+            return v == o.v;
+        }
+
+        // ReSharper disable once CppNonExplicitConversionOperator
+        operator Str& () & {
+            return v;
+        }
+        operator const Str& () const & {
+            return v;
+        }
+    };
     using NtvId = MBStr;
 
 
     using CTValue = std::variant<
         Bool, Byte, Char,
         Int, Long, Float, Double,
-        ObjRefRepr
+        ReferenceRepr
     >;
 
 
@@ -42,13 +82,13 @@ export namespace pnl::ll::inline comtime{
 
     struct PNL_LIB_PREFIX FOverrideRepr {
         using ImplRepr = std::variant<List<Instruction>, NtvId>;
-        List<ObjRefRepr> arg_ts;
-        ObjRefRepr ret_t;
-        ImplRepr   impl;
+        List<ReferenceRepr> arg_ts{};
+        ReferenceRepr ret_t{{}};
+        ImplRepr   impl{};
 
         using Delegated = std::tuple<
-            List<ObjRefRepr>&,
-            ObjRefRepr&,
+            List<ReferenceRepr>&,
+            ReferenceRepr&,
             ImplRepr&
         >;
         bool operator==(const FOverrideRepr &o) const noexcept {
@@ -67,55 +107,46 @@ export namespace pnl::ll::inline comtime{
     };
 
     struct PNL_LIB_PREFIX ClassRepr{
-        Str name;
-        ObjRefRepr maker;
-        ObjRefRepr collector;
+        Str name{};
+        ReferenceRepr maker{{}};
+        ReferenceRepr collector{{}};
         // name -> type
-        List<Pair<Str, ObjRefRepr>>
-            member_list;
-        List<ObjRefRepr>
-            method_list;
+        List<Pair<Str, ReferenceRepr>>
+            member_list{};
+        List<ReferenceRepr>
+            method_list{};
         // name -> global obj
-        List<ObjRefRepr>
-            static_member_list;
-        List<ObjRefRepr>
-            static_method_list;
-
-
-        ClassRepr(Str name, ObjRefRepr maker, ObjRefRepr collector, List<Pair<Str, ObjRefRepr>> member_list,
-            List<ObjRefRepr> method_list, List<ObjRefRepr> static_member_list, List<ObjRefRepr> static_method_list)
-            noexcept: name(std::move(name)),
-              maker(std::move(maker)),
-              collector(std::move(collector)),
-              member_list(std::move(member_list)),
-              method_list(std::move(method_list)),
-              static_member_list(std::move(static_member_list)),
-              static_method_list(std::move(static_method_list)) {
-        }
+        List<ReferenceRepr>
+            static_member_list{};
+        List<ReferenceRepr>
+            static_method_list{};
 
         bool operator==(const ClassRepr &) const noexcept = default;
 
         using Delegated = std::tuple<
-            List<Pair<Str, ObjRefRepr>>&,
-            List<ObjRefRepr>&,
-            List<ObjRefRepr>&,
-            List<ObjRefRepr>&
+            Str&,
+            ReferenceRepr&,
+            ReferenceRepr&,
+            List<Pair<Str, ReferenceRepr>>&,
+            List<ReferenceRepr>&,
+            List<ReferenceRepr>&,
+            List<ReferenceRepr>&
         >;
         // ReSharper disable once CppNonExplicitConversionOperator
         operator Delegated () noexcept;
     };
 
     struct PNL_LIB_PREFIX NamedTypeRepr {
-        Str name;
-        Long size;
-        ObjRefRepr maker;
-        ObjRefRepr collector;
+        Str name{};
+        Long size{};
+        ReferenceRepr maker{{}};
+        ReferenceRepr collector{{}};
 
         using Delegated = std::tuple<
             Str&,
             Long&,
-            ObjRefRepr&,
-            ObjRefRepr&
+            ReferenceRepr&,
+            ReferenceRepr&
         >;
 
         bool operator==(const NamedTypeRepr &) const noexcept = default;
@@ -127,22 +158,22 @@ export namespace pnl::ll::inline comtime{
     };
 
     struct PNL_LIB_PREFIX ObjectRepr{
-        ObjRefRepr
-            type;
+        ReferenceRepr
+            type{{}};
         USize
-            constructor_override_id;
+            constructor_override_id{};
         List<CTValue>
-            constructor_params;
+            constructor_params{};
 
         bool operator==(const ObjectRepr &) const noexcept = default;
 
-        using Delegated = std::tuple<ObjRefRepr&, USize&, List<CTValue>&>;
+        using Delegated = std::tuple<ReferenceRepr&, USize&, List<CTValue>&>;
 
         // ReSharper disable once CppNonExplicitConversionOperator
         operator Delegated () noexcept;
     };
 
-    struct CharArrayRepr: Str {};
+
 
 
 
@@ -152,7 +183,7 @@ export namespace pnl::ll::inline comtime{
             Int, Long, Float, Double,
             NamedTypeRepr,
 
-            ObjRefRepr,
+            ReferenceRepr,
             FFamilyRepr,
             ClassRepr,
             ObjectRepr,
@@ -160,12 +191,13 @@ export namespace pnl::ll::inline comtime{
         >;
 
         List<Content>           data;
-        Map<USize, ObjRefRepr>  exports;
+        Map<USize, ReferenceRepr>  exports;
 
+        explicit Package(MManager* mem) noexcept;
 
         Package(
             List<Content> data,
-            Map<USize, ObjRefRepr> exports) noexcept;
+            Map<USize, ReferenceRepr> exports) noexcept;
 
 
         Package(const Package &other) noexcept = default;
@@ -181,12 +213,27 @@ export namespace pnl::ll::inline comtime{
         bool operator == (const Package &) const noexcept = default;
 
 
-        using Delegated = std::tuple<List<Content>&, Map<USize, ObjRefRepr>&>;
+        using Delegated = std::tuple<List<Content>&, Map<USize, ReferenceRepr>&>;
 
         // ReSharper disable once CppNonExplicitConversionOperator
         operator Delegated () noexcept;
-
-        static Package anonymous_builtin(MManager*) noexcept;
-        static Package io(MManager*) noexcept;
     };
+
+    // format: Arr<T>
+    PNL_LIB_PREFIX
+    Str typename_arr(
+        MManager*
+            mem,
+        const Char* type,
+        USize size);
+
+    // format: (p1t, p2t, <1>, p3t, <2>, ...) -> ret/<i>
+    PNL_LIB_PREFIX
+    Str typename_fun(
+            MManager*
+                mem,
+            const List<ReferenceRepr>&   param_sigs,
+            const ReferenceRepr&         ret_sig) noexcept;
+
+
 }

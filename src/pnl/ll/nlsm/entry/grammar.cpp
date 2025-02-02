@@ -272,7 +272,7 @@ struct NLSMBuilder final : nlsmBaseVisitor {
 
             return po - buf;
         });
-        return {Package::Content{TFlag<CharArrayRepr>, parsed.substr(1, parsed.length() - 2)}};
+        return {Package::Content{TFlag<CharArrayRepr>, std::move(out)}};
     }
 
     std::any visitNamed_type_value(nlsmParser::Named_type_valueContext *ctx) override {

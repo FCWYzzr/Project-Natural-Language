@@ -114,3 +114,5 @@ install(TARGETS nl-ll
     LIBRARY DESTINATION "${loc}/lib")
 install(TARGETS nlsm DESTINATION "${loc}/bin")
 install(TARGETS nlim DESTINATION "${loc}/bin")
+
+set_property(GLOBAL PROPERTY LL-Interface ${PNL-Lower-Level-interface})

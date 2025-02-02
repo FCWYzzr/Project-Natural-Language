@@ -38,5 +38,6 @@ namespace println {
             );
         });
         fputs(out.c_str(), stdout);
+        fputc('\n', stdout);
     }
 }

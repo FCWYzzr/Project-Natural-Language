@@ -29,11 +29,11 @@ pnl::ll::Str pnl::ll::codecvt::cvt(const MBStr &in) noexcept {
     s.reserve(in.size()+1);
     s.resize_and_overwrite(in.size() + 1, [&](Char* buf, const std::size_t buf_size) {
         return code_cvt(
-            reinterpret_cast<char*>(buf), buf_size * sizeof(Char),
-            in.data(), in.size(),
-            ntv_encoding, vm_encoding,
-            in.get_allocator().resource()
-        ) / sizeof(Char);
+                   in.data(), in.size(),
+                   reinterpret_cast<char*>(buf), buf_size * sizeof(Char),
+                   ntv_encoding, vm_encoding,
+                   in.get_allocator().resource()
+               ) / sizeof(Char);
     });
     return s;
 }
@@ -42,8 +42,8 @@ pnl::ll::MBStr pnl::ll::codecvt::cvt(const Str &in) noexcept {
     s.reserve((in.size() + 1) * sizeof(Char));
     s.resize_and_overwrite((in.size() + 1) * sizeof(Char), [&](char* buf, const std::size_t buf_size) {
         return code_cvt(
-            buf, buf_size,
             reinterpret_cast<const char*>(in.data()), in.length() * sizeof(Char),
+            buf, buf_size,
             vm_encoding, ntv_encoding,
             in.get_allocator().resource()
         );
@@ -51,7 +51,7 @@ pnl::ll::MBStr pnl::ll::codecvt::cvt(const Str &in) noexcept {
     return s;
 }
 
-std::size_t pnl::ll::codecvt::code_cvt(char* out, std::size_t out_size, const char* in, std::size_t in_size, const char* code_in, const char* code_out, MManager* mem) noexcept {
+std::size_t pnl::ll::codecvt::code_cvt(const char* in, std::size_t in_size, char* out, std::size_t out_size, const char* code_in, const char* code_out, MManager* mem) noexcept {
     const auto codecvt = iconv_open(code_out, code_in);
     const auto out_ori = out_size;
 

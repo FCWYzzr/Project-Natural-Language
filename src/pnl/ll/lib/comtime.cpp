@@ -66,29 +66,38 @@ Package::operator Package::Delegated () noexcept {
 }
 
 Str comtime::typename_arr(MManager * const mem, const Char* const type, const USize size) {
-
     auto ret = Str{mem};
+    ret += VM_TEXT("(");
     ret += type;
+    ret += VM_TEXT(")");
     ret += VM_TEXT('[');
     append(ret, static_cast<Long>(size));
     ret += VM_TEXT(']');
+    ret.shrink_to_fit();
     return std::move(ret);
 }
 
+bool comtime::parse_typename_arr(const ReferenceRepr& type, ReferenceRepr& name, USize &size) {
+    if (type.v.back() != VM_TEXT(']'))
+        return false;
+
+    {
+        constexpr auto beg = 1;
+        const auto end = type.v.find_last_of(VM_TEXT(')'));
+        name = type.v.substr(beg, end - beg - 1);
+    }
+    {
+        const auto beg = type.v.find_last_of(VM_TEXT('[')) + 1;
+        const auto end = type.v.find_last_of(VM_TEXT(']'));
+        size = to_usz(type.v.substr(beg, end - beg - 1), IntBase::DEC);
+    }
+
+
+    return true;
+}
+
 Str comtime::typename_fun(MManager *mem, const List<ReferenceRepr> &param_sigs, const ReferenceRepr &ret_sig) noexcept {
-    USize buf_size = 6; // "() -> "
-
-    if (!param_sigs.empty())
-        buf_size += size_cast(param_sigs[0].v.length());
-
-
-    for (auto& p_sig: param_sigs | std::views::drop(1))
-        buf_size += size_cast(p_sig.v.length() + 2);    // , ti
-
-    buf_size += size_cast(ret_sig.v.length());  // ti
-
     auto ret = Str(mem);
-    ret.reserve(buf_size);
 
     ret += VM_TEXT('(');
     if (!param_sigs.empty())
@@ -104,5 +113,32 @@ Str comtime::typename_fun(MManager *mem, const List<ReferenceRepr> &param_sigs, 
 
     ret += ret_sig;
 
+    ret.shrink_to_fit();
     return ret;
 }
+
+bool comtime::parse_typename_fun(const ReferenceRepr& type, List<ReferenceRepr> &param_sigs, ReferenceRepr &ret_sig) noexcept {
+    param_sigs.clear();
+    {
+        auto beg = 1ull;
+        auto cur = type.v.find_first_of(VM_TEXT(','), beg + 1);
+        while (cur != Str::npos) {
+            param_sigs.emplace_back(type.v.substr(beg, cur - beg - 1));
+            beg = cur + 2;
+            cur = type.v.find_first_of(VM_TEXT(','), beg + 1);
+        }
+        cur = type.v.find_first_of(VM_TEXT(')'), beg + 1);
+        if (cur == Str::npos)
+            return false;
+        if (cur != beg + 1)
+            param_sigs.emplace_back(type.v.substr(beg, cur - beg - 1));
+    }
+    {
+        const auto beg = type.v.find_first_of(VM_TEXT(") -> "));
+        if (beg == Str::npos)
+            return false;
+        ret_sig = type.v.substr(beg);
+    }
+    return true;
+}
+

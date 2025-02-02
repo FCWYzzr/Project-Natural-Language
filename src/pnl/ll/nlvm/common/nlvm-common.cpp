@@ -85,7 +85,6 @@ struct cvt_t: std::codecvt<char, wchar_t, std::mbstate_t>{};
 
 namespace nlvm::common {
     void prepare(Process& process, int argc, const char *argv[]) {
-        memory.upstream_resource()
         Str err{&memory};
         enum class State {
             LOAD_LIB,
@@ -212,7 +211,7 @@ namespace nlvm::common {
                             arr_maker,
                             arr_collector},
                         addr_tp,
-                        static_cast<Long>(cache.size())
+                        static_cast<Long>(params.size())
                     );
 
                 }
@@ -220,7 +219,7 @@ namespace nlvm::common {
 
             process.main_thread().eval_deque.emplace_back(VirtualAddress::from_process_offset(process.process_page.milestone()));
             process.process_page.placeholder_push(
-                sizeof(RTTObject) + sizeof(VirtualAddress) * cache.size()
+                sizeof(RTTObject) + sizeof(VirtualAddress) * params.size()
             );
             auto repr = &process.process_page.ref_top<UByte>();
             reinterpret_cast<RTTObject*&>(repr) ++ -> type = addr_arr_t;

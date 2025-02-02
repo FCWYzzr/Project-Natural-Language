@@ -43,6 +43,35 @@ Str & string::append(Str &self, Long v, IntBase base) {
     return self;
 }
 
+USize string::to_usz(const Str& self, IntBase base) noexcept {
+    using enum IntBase;
+    assert(static_cast<int>(base) > 1, {"invalid base", self.get_allocator()});
+    assert(static_cast<int>(base) < 36, {"base >= 36, infer digit desc fail", self.get_allocator()});
+
+    USize buf = 0;
+    for (const Char& ch: self) {
+        if (base <= DEC) {
+            if (!is_digit(ch) || ch >= VM_TEXT('0' + static_cast<int>(base)))
+                return 0;
+            buf *= static_cast<int>(base);
+            buf += ch - VM_TEXT('0');
+        }
+        else if  (static_cast<int>(ch) <= 36) {
+            buf *= static_cast<int>(base);
+            if (is_digit(ch))
+                buf += ch - VM_TEXT('0');
+            else if (is_upper(ch))
+                buf += ch - VM_TEXT('A') + 10;
+            else if (is_lower(ch))
+                buf += ch - VM_TEXT('a') + 10;
+            else
+                return 0;
+
+        }
+    }
+    return buf;
+}
+
 Str string::to_string(MManager * const mem, const Long v, const IntBase base) noexcept {
     auto s = Str(mem);
     s.reserve(length(v, base));
@@ -53,5 +82,33 @@ Str string::to_string(MManager * const mem, const Long v, const IntBase base) no
     );
     return std::move(s);
 }
+
+
+bool string::is_digit(const Char ch) noexcept {
+    return VM_TEXT('0') <= ch && ch <= VM_TEXT('9');
+}
+bool string::is_alpha(const Char ch) noexcept {
+    return is_upper(ch) || is_lower(ch);
+}
+
+
+bool string::is_upper(const Char ch) noexcept {
+    return VM_TEXT('A') <= ch && ch <= VM_TEXT('Z');
+}
+Char string::to_lower(const Char ch) noexcept {
+    if (is_upper(ch))
+        return ch - VM_TEXT('A') + VM_TEXT('a');
+    return ch;
+}
+
+bool string::is_lower(const Char ch) noexcept {
+    return VM_TEXT('a') <= ch && ch <= VM_TEXT('z');
+}
+Char string::to_upper(const Char ch) noexcept {
+    if (is_lower(ch))
+        return ch - VM_TEXT('a') + VM_TEXT('A');
+    return ch;
+}
+
 
 

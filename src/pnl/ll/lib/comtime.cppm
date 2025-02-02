@@ -219,7 +219,7 @@ export namespace pnl::ll::inline comtime{
         operator Delegated () noexcept;
     };
 
-    // format: Arr<T>
+    // format: (T)[N]
     PNL_LIB_PREFIX
     Str typename_arr(
         MManager*
@@ -227,13 +227,26 @@ export namespace pnl::ll::inline comtime{
         const Char* type,
         USize size);
 
-    // format: (p1t, p2t, <1>, p3t, <2>, ...) -> ret/<i>
+    PNL_LIB_PREFIX
+    bool parse_typename_arr(
+        const ReferenceRepr& type,
+        ReferenceRepr& name,
+        USize& size
+    );
+
+    // format: (p1t, p2t, p3t, ...) -> ret
     PNL_LIB_PREFIX
     Str typename_fun(
             MManager*
                 mem,
             const List<ReferenceRepr>&   param_sigs,
             const ReferenceRepr&         ret_sig) noexcept;
+
+    PNL_LIB_PREFIX
+    bool parse_typename_fun(
+            const ReferenceRepr& type,
+            List<ReferenceRepr>&   param_sigs,
+            ReferenceRepr&         ret_sig) noexcept;
 
 
 }

@@ -573,7 +573,7 @@ void cmp(Thread& thr) noexcept {
 }
 
 void invoke_top(Thread& thr) noexcept {
-    const auto place =  std::get<VirtualAddress>(thr.take());
+    const auto place = std::get<VirtualAddress>(thr.take());
     const auto& ref = thr.deref<FFamily>(place);
     thr.call_function(ref, 0);
 }

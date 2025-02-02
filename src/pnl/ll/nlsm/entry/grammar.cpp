@@ -113,8 +113,116 @@ struct NLSMBuilder final : nlsmBaseVisitor {
 
     std::any visitChar_value(nlsmParser::Char_valueContext *ctx) override {
         const auto parsed = cvt(ctx->CHAR()->getText(), *mem);
-        return {Package::Content{TFlag<Char>, parsed[1]}};
+        if (parsed[1] != '\\')
+            return {Package::Content{TFlag<Char>, parsed[1]}};
+
+        auto state = TranslateState{};
+        Char out;
+        auto pi = parsed.c_str() + 1;
+        auto po = &out;
+        while (*pi != VM_TEXT('"'))
+            translate(pi, po, state);
+        return {Package::Content{TFlag<Char>, out}};
     }
+
+    struct TranslateState {
+        enum class Mode {
+            Literal,
+            TranslateReady,
+            Oct,
+            Hex
+        } mode{Mode::Literal};
+        std::uint32_t cache{0};
+    };
+
+    static void translate(const Char*& in, Char*& out, TranslateState& state) noexcept {
+        using enum TranslateState::Mode;
+        switch (state.mode) {
+            case Literal: {
+                if (*in == VM_TEXT('\\'))
+                    state.mode = TranslateReady;
+                else
+                    *out ++ = *in;
+                ++ in;
+                break;
+            }
+            case TranslateReady: {
+                state.mode = Literal;
+                switch (to_lower(*in)) {
+                    case VM_TEXT('\''):
+                    case VM_TEXT('\"'):
+                    case VM_TEXT('\?'):
+                    case VM_TEXT('\\'):
+                        *out ++ = *in;
+                        break;
+                    case VM_TEXT('a'):
+                        *out ++ = VM_TEXT('\a');
+                        break;
+                    case VM_TEXT('b'):
+                        *out ++ = VM_TEXT('\b');
+                        break;
+                    case VM_TEXT('f'):
+                        *out ++ = VM_TEXT('\f');
+                        break;
+                    case VM_TEXT('n'):
+                        *out ++ = VM_TEXT('\n');
+                        break;
+                    case VM_TEXT('r'):
+                        *out ++ = VM_TEXT('\r');
+                        break;
+                    case VM_TEXT('t'):
+                        *out ++ = VM_TEXT('\t');
+                        break;
+                    case VM_TEXT('v'):
+                        *out ++ = VM_TEXT('\v');
+                        break;
+                    case VM_TEXT('o'):
+                        state.mode = Oct;
+                        break;
+                    case VM_TEXT('x'):
+                        state.mode = Hex;
+                        break;
+                    default:;
+                }
+                ++ in;
+                break;
+            }
+            case Oct: {
+                switch (*in) {
+                    case VM_TEXT('{'):
+                        state.cache = 0;
+                        break;
+                    case VM_TEXT('}'):
+                        *out ++ = static_cast<Char>(state.cache);
+                        state.mode = Literal;
+                        break;
+                    default:
+                        state.cache *= 8;
+                        state.cache += *in - VM_TEXT('0');
+                }
+                break;
+            }
+            case Hex: {
+                switch (*in) {
+                    case VM_TEXT('{'):
+                        state.cache = 0;
+                        break;
+                    case VM_TEXT('}'):
+                        *out ++ = static_cast<Char>(state.cache);
+                        state.mode = Literal;
+                        break;
+                    default:
+                        state.cache *= 16;
+                        if (is_digit(*in))
+                            state.cache += *in - VM_TEXT('0');
+                        else
+                            state.cache += to_lower(*in) - VM_TEXT('a');
+                }
+                break;
+            }
+        }
+    }
+
 
     std::any visitInt_value(nlsmParser::Int_valueContext *ctx) override {
         const auto parsed = strtoll(ctx->DECIMAL()->getText().c_str(), nullptr, 10);
@@ -152,6 +260,18 @@ struct NLSMBuilder final : nlsmBaseVisitor {
 
     std::any visitChar_array_value(nlsmParser::Char_array_valueContext *ctx) override {
         const auto parsed = cvt(ctx->STRING()->getText(), *mem);
+
+        auto out = Str{mem};
+        out.resize_and_overwrite(parsed.size(), [&](Char* buf, size_t sz) {
+            auto pi = parsed.c_str() + 1;
+            auto po = buf;
+            auto state = TranslateState{};
+
+            while (*pi != VM_TEXT('\"'))
+                translate(pi, po, state);
+
+            return po - buf;
+        });
         return {Package::Content{TFlag<CharArrayRepr>, parsed.substr(1, parsed.length() - 2)}};
     }
 

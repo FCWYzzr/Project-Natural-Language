@@ -370,8 +370,8 @@ export namespace pnl::ll::runtime::load {
         Stack<Value>
             preloaded_params;
 
-        Queue<USize>
-            preloaded_str_len;
+        Queue<Pair<ReferenceRepr, USize>>
+            preloaded_arr_tp_repr;
 
         Patch(MManager* mem) noexcept
             : preloaded_strings(mem),
@@ -385,13 +385,13 @@ export namespace pnl::ll::runtime::load {
               preloaded(mem),
               exports(mem),
               preloaded_params(mem),
-              preloaded_str_len(mem) {}
+              preloaded_arr_tp_repr(mem) {}
 
         Patch(Queue<Str> preloaded_strings, Queue<OverrideType> preloaded_override_type,
             Queue<Queue<VirtualAddress>> arg_types, Queue<Queue<Instruction>> instructions, Queue<NtvId> ntv_funcs,
             Queue<Queue<FOverride>> preloaded_overrides, Queue<Queue<MemberInfo>> preloaded_member_segments,
             Queue<Queue<VirtualAddress>> preloaded_cls_ext_segments, Queue<LTValue> preloaded,
-            BiMap<Str, USize> exports, Stack<Value> preloaded_params, Queue<USize> preloaded_str_len)
+            BiMap<Str, USize> exports, Stack<Value> preloaded_params, Queue<Pair<ReferenceRepr, USize>> preloaded_str_len)
             noexcept:
               preloaded_strings(std::move(preloaded_strings)),
               preloaded_override_type(std::move(preloaded_override_type)),
@@ -404,7 +404,7 @@ export namespace pnl::ll::runtime::load {
               preloaded(std::move(preloaded)),
               exports(std::move(exports)),
               preloaded_params(std::move(preloaded_params)),
-              preloaded_str_len(std::move(preloaded_str_len)) {
+              preloaded_arr_tp_repr(std::move(preloaded_str_len)) {
         }
 
         Patch(Patch &&other) noexcept
@@ -420,7 +420,7 @@ export namespace pnl::ll::runtime::load {
               preloaded(std::move(other.preloaded)),
               exports(std::move(other.exports)),
               preloaded_params(std::move(other.preloaded_params)),
-              preloaded_str_len(std::move(other.preloaded_str_len)) {
+              preloaded_arr_tp_repr(std::move(other.preloaded_arr_tp_repr)) {
         }
 
         Patch & operator=(Patch &&other) noexcept {
@@ -438,7 +438,7 @@ export namespace pnl::ll::runtime::load {
             preloaded = std::move(other.preloaded);
             exports = std::move(other.exports);
             preloaded_params = std::move(other.preloaded_params);
-            preloaded_str_len = std::move(other.preloaded_str_len);
+            preloaded_arr_tp_repr = std::move(other.preloaded_arr_tp_repr);
             return *this;
         }
 
@@ -454,7 +454,7 @@ export namespace pnl::ll::runtime::load {
             Queue<LTValue>&,
             BiMap<Str, USize>&,
             Stack<Value>&,
-            Queue<USize>&
+            Queue<Pair<ReferenceRepr, USize>>&
         >;
 
         // ReSharper disable once CppNonExplicitConversionOperator
@@ -471,7 +471,7 @@ export namespace pnl::ll::runtime::load {
             preloaded,
             exports,
             preloaded_params,
-            preloaded_str_len
+            preloaded_arr_tp_repr
             );
         }
     };

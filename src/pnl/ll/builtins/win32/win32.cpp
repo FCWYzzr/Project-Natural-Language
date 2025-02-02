@@ -17,8 +17,8 @@ namespace FMessageBox{
             const auto size = thr.deref<ArrayType>(title_v.super.type).length + 1;
             title.resize_and_overwrite(size * sizeof(Char), [&](char* buf, USize buf_size) {
                 return code_cvt(
-                    buf, buf_size,
                     reinterpret_cast<char*>(title_v.data()), size * sizeof(Char),
+                    buf, buf_size,
                     vm_encoding,
                     ntv_encoding,
                     &thr.process->process_memory
@@ -30,8 +30,8 @@ namespace FMessageBox{
             const auto size = thr.deref<ArrayType>(content_v.super.type).length + 1;
             content.resize_and_overwrite(size * sizeof(Char), [&](char* buf, USize buf_size) {
                 return code_cvt(
-                    buf, buf_size,
                     reinterpret_cast<char*>(content_v.data()), size * sizeof(Char),
+                    buf, buf_size,
                     vm_encoding,
                     ntv_encoding,
                     &thr.process->process_memory

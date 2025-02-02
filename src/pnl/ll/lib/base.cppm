@@ -67,6 +67,7 @@ export namespace pnl::ll::inline base {
     // native types
     inline namespace native {
         using UByte     = unsigned char;
+        using SStream   = std::basic_stringstream<Char, std::char_traits<Char>, std::pmr::polymorphic_allocator<Char>>;
         using BIStream   = std::basic_istream<UByte>;
         using BOStream   = std::basic_ostream<UByte>;
         using BIFStream   = std::basic_fstream<UByte>;
@@ -174,7 +175,7 @@ export namespace pnl::ll::inline codecvt{
     MBStr cvt(const Str& in) noexcept;
 
     PNL_LIB_PREFIX
-    std::size_t code_cvt(char* out, std::size_t out_size, const char* in, std::size_t in_size, const char* code_in, const char* code_out, MManager* mem) noexcept;
+    std::size_t code_cvt(const char* in, std::size_t in_size, char* out, std::size_t out_size, const char* code_in, const char* code_out, MManager* mem) noexcept;
 }
 
 export namespace pnl::ll::inline conditions{

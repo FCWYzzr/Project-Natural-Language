@@ -31,34 +31,11 @@ example
     nlvm -n rt -l builtins.nlimg -r test.nlpkg "hello world"
 
 )";
-    struct LimitMemoryResource final: std::pmr::synchronized_pool_resource {
-        std::array<UByte, 4_KB> cache{};
-        std::unique_ptr<UByte[]> managed;
-        std::pmr::monotonic_buffer_resource cache_buffer;
-        std::pmr::monotonic_buffer_resource memory_buffer;
-
-
-        explicit LimitMemoryResource(const USize size) noexcept:
-            synchronized_pool_resource{&cache_buffer},
-            managed{std::make_unique<UByte[]>(size)},
-            cache_buffer{
-                cache.data(),
-                cache.size(),
-                size == 0
-                ? std::pmr::new_delete_resource()
-                : &memory_buffer
-            },
-            memory_buffer{
-                managed.get(),
-                size,
-                std::pmr::null_memory_resource()
-            }
-        {}
-        ~LimitMemoryResource() noexcept override = default;
-    };
 
     // todo: add param-controlled memory limit
-    LimitMemoryResource memory{0};
+    std::array<UByte, 4_KB> cache;
+    std::pmr::monotonic_buffer_resource buffer{cache.data(), cache.size(), std::pmr::new_delete_resource()};
+    std::pmr::synchronized_pool_resource memory{&buffer};
 
     void prepare(Process&, int, const char*[]);
     void prepare(Process&, int, const wchar_t*[]);

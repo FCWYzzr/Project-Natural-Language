@@ -195,17 +195,26 @@ std::optional<Patch> Process::compile_datapack(
     }
 
     // interpret obj ref -> addr
+    auto preloaded_arr_tp = Queue<Pair<ReferenceRepr, USize>>{&process_memory};
+
     for (const auto [idx, obj]: merged_values
         | std::views::enumerate
         | std::views::filter([](const auto& o) {
             return std::get<1>(o).index() == 8;
         })) {
+        auto elem_tp = ReferenceRepr{Str{&process_memory}};
+        USize arr_len;
+
         if (const auto& ref_repr = std::get<8>(obj);
             exports.contains<Str>(ref_repr)) [[likely]]{
             preloaded[idx] = VirtualAddress::from_reserve_offset(exports.at<Str>(ref_repr));
         }
         else if (named_exports.contains(ref_repr)) [[likely]]
             preloaded[idx] = named_exports.at(ref_repr);
+        else if (parse_typename_arr(ref_repr, elem_tp, arr_len)) {
+            preloaded[idx] = VirtualAddress(VirtualAddress::native_page_id, 0);
+            preloaded_arr_tp.emplace(elem_tp, arr_len);
+        }
         else [[unlikely]]{
             auto info = build_str(
                 &process_memory,
@@ -652,13 +661,14 @@ std::optional<Patch> Process::compile_datapack(
     }
 
 
-    auto preloaded_str_length = Queue<USize>{&process_memory};
+
+
     for (const auto [idx, obj]: merged_values
         | std::views::enumerate
         | std::views::filter([](const auto& o) {
             return std::get<1>(o).index() == 12;
         })) {
-        preloaded_str_length.emplace(std::get<12>(obj).v.length());
+        preloaded_arr_tp.emplace(Str{VM_TEXT("core::char"), &process_memory}, std::get<12>(obj).v.length());
         preloaded[idx] = std::move(std::get<12>(obj));
     }
 
@@ -679,7 +689,7 @@ std::optional<Patch> Process::compile_datapack(
         std::move(preloaded_q),
         std::move(exports),
         std::move(preloaded_params),
-        std::move(preloaded_str_length)
+        std::move(preloaded_arr_tp)
     }};
 }
 
@@ -724,7 +734,7 @@ void Process::load_patch(
         preloaded,
         exports,
         params,
-        preloaded_str_length
+        preloaded_arr_tp
     ] = std::move(patch);
 
     const auto arr_type_t_addr = named_exports.contains(VM_TEXT("core::Array"))
@@ -1209,19 +1219,113 @@ void Process::load_patch(
 
     }
 
-    // phase - 5 load char arr type
-    auto str_type = Queue<VirtualAddress>{&process_memory};{
-        const auto char_addr = named_exports.contains(VM_TEXT("core::char"))
-        ? named_exports.at(VM_TEXT("core::char"))
-        : VirtualAddress::from_reserve_offset(exports.at<Str>(VM_TEXT("core::char")));
+    // phase - 5 load arr type
+    auto arr_type = Queue<VirtualAddress>{&process_memory};{
+        {
+            auto prerequest_arr_tp = Stack<Pair<ReferenceRepr, USize>>{&process_memory};
 
-        while (!preloaded_str_length.empty()) {
-            auto len = preloaded_str_length.front();
-            preloaded_str_length.pop();
+            for (auto _: std::views::iota(0u, prerequest_arr_tp.size())) {
+                auto& [tp, sz] = preloaded_arr_tp.front();
+                auto elem = ReferenceRepr{Str{&process_memory}};
+                auto len = USize{};
 
-            if (auto name = typename_arr(&process_memory, VM_TEXT("core::char"), len);
+
+                if (exports.contains(tp.v) || named_exports.contains(tp.v))
+                    continue;
+
+                if (!parse_typename_arr(tp, elem, len)) {
+                    auto err_info = build_str(
+                        &process_memory,
+                        VM_TEXT("could not found tp: "),
+                        tp
+                    );
+                    assert(err != nullptr, err_info);
+                    *err = std::move(err_info);
+                    return;
+                }
+
+                prerequest_arr_tp.emplace(elem, len);
+
+                preloaded_arr_tp.emplace(std::move(preloaded_arr_tp.front()));
+                preloaded_arr_tp.pop();
+            }
+
+
+            while (!prerequest_arr_tp.empty()){
+                auto [tp, len] = prerequest_arr_tp.top();
+                auto elem = ReferenceRepr{Str{&process_memory}};
+                USize sz;
+                preloaded_arr_tp.pop();
+
+                VirtualAddress tp_addr;
+                if (named_exports.contains(tp.v))
+                    tp_addr = named_exports.at(tp.v);
+                else if (exports.contains(tp.v))
+                    tp_addr = VirtualAddress::from_reserve_offset(exports.at<Str>(tp.v));
+                else if (parse_typename_arr(tp, elem, sz)) {
+                    prerequest_arr_tp.emplace(elem, sz);
+                    continue;
+                }
+                else {
+                    auto err_info = build_str(
+                        &process_memory,
+                        VM_TEXT("could not found tp: "),
+                        tp
+                    );
+                    assert(err != nullptr, err_info);
+                    *err = std::move(err_info);
+                    return;
+                }
+
+
+
+                if (auto name = typename_arr(&process_memory, tp.v.data(), len);
+                    !named_exports.contains(name)) {
+                    named_exports.emplace(std::move(name),
+                        process_page.milestone()
+                    );
+                    translate_required.emplace(
+                        VirtualAddress::process_page_id,
+                        process_page.milestone(),
+                        u16offsetof(ArrayType, super.super.type)
+                    );
+                    translate_required.emplace(
+                        VirtualAddress::process_page_id,
+                        process_page.milestone(),
+                        u16offsetof(ArrayType, elem_type)
+                    );
+                    process_page.emplace_top(
+                        TFlag<ArrayType>,
+                        Type{{arr_type_t_addr},
+                            static_cast<Long>(sizeof(RTTObject) + sizeof(Char) * len),
+                            arr_constructor_addr, arr_destructor_addr},
+                        tp_addr,
+                        static_cast<Long>(len)
+                    );
+                }
+
+                prerequest_arr_tp.pop();
+            }
+        }
+
+        while (!preloaded_arr_tp.empty()) {
+            auto [tp, len] = preloaded_arr_tp.front();
+            preloaded_arr_tp.pop();
+
+            VirtualAddress tp_addr;
+            if (named_exports.contains(tp.v))
+                tp_addr = named_exports.at(tp.v);
+            else if (exports.contains(tp.v))
+                tp_addr = VirtualAddress::from_reserve_offset(exports.at<Str>(tp.v));
+            else if (tp.v.back() == VM_TEXT(']')) {
+                tp_addr = VirtualAddress(exports.at<Str>(tp.v));
+            }
+
+
+
+            if (auto name = typename_arr(&process_memory, tp.v.data(), len);
                 !named_exports.contains(name)) {
-                named_exports.emplace(std::move(name), str_type.emplace(VirtualAddress::from_process_offset(
+                named_exports.emplace(std::move(name), arr_type.emplace(VirtualAddress::from_process_offset(
                     process_page.milestone()
                 )));
                 translate_required.emplace(
@@ -1239,12 +1343,12 @@ void Process::load_patch(
                     Type{{arr_type_t_addr},
                         static_cast<Long>(sizeof(RTTObject) + sizeof(Char) * len),
                         arr_constructor_addr, arr_destructor_addr},
-                    char_addr,
+                    tp_addr,
                     static_cast<Long>(len)
                 );
                 }
             else {
-                str_type.emplace(named_exports.at(name));
+                arr_type.emplace(named_exports.at(name));
             }
         }
     }
@@ -1287,9 +1391,16 @@ void Process::load_patch(
                 if (obj.is_reserved())
                     process_page.emplace_top(TFlag<VirtualAddress>,
                         base_object_addr.id_shift(obj.id()));
-                else
+                else if (obj.is_process())
                     process_page.emplace_top(TFlag<VirtualAddress>,
                         obj);
+                else {
+                    process_page.emplace_top(TFlag<VirtualAddress>,
+                        arr_type.front()
+                    );
+                    arr_type.pop();
+                }
+
             }
             else if constexpr (std::same_as<T, FFamily>) {
                 translate_required.emplace(
@@ -1328,7 +1439,7 @@ void Process::load_patch(
                 );
             }
             else if constexpr (std::same_as<T, CharArrayRepr>) {
-                const auto tp = str_type.front(); str_type.pop();
+                const auto tp = arr_type.front(); arr_type.pop();
                 const auto& t = deref<ArrayType>(tp);
                 process_page.placeholder_push(t.super.instance_size);
                 auto repr = &process_page.ref_top<UByte>();

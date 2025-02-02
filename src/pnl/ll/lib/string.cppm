@@ -22,6 +22,9 @@ export namespace pnl::ll::inline string{
     PNL_LIB_PREFIX
     Str& append(Str& self, Long v, IntBase base=IntBase::DEC);
 
+    PNL_LIB_PREFIX
+    USize to_usz(const Str& self, IntBase base=IntBase::DEC) noexcept;
+
 
     PNL_LIB_PREFIX
     Str to_string(
@@ -29,10 +32,6 @@ export namespace pnl::ll::inline string{
             mem,
         Long v,
         IntBase base=IntBase::DEC) noexcept;
-
-
-
-
 
     template<typename ...Args>
     Str build_str(MManager* mem, Args&& ...args) noexcept {
@@ -46,5 +45,14 @@ export namespace pnl::ll::inline string{
         ((ret += std::forward<Args>(args)), ...);
         return ret;
     }
+
+    bool PNL_LIB_PREFIX is_digit(Char ch) noexcept;
+    bool PNL_LIB_PREFIX is_alpha(Char ch) noexcept;
+
+    bool PNL_LIB_PREFIX is_lower(Char ch) noexcept;
+    Char PNL_LIB_PREFIX to_lower(Char ch) noexcept;
+
+    bool PNL_LIB_PREFIX is_upper(Char ch) noexcept;
+    Char PNL_LIB_PREFIX to_upper(Char ch) noexcept;
 }
 

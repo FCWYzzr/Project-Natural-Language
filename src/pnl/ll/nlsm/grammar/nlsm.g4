@@ -76,8 +76,20 @@ CHAR
     : '\'' ~['brtn\\] '\''
     | '\'\\' ['brtn\\] '\''
     ;
+fragment CChar
+    : ~[\\']
+    | '\\' ['"?\\abfnrtv]
+    | '\\o{' [0-7]+ '}'
+    | '\\x{' [0-9a-fA-F]+ '}'
+    ;
 STRING
     : '"' SChar* '"'
+    ;
+fragment SChar
+    : ~[\\"]
+    | '\\' ['"?\\abfnrtv]
+    | '\\' [oO] '{' [0-7]+ '}'
+    | '\\' [xXuU] '{' [0-9a-fA-F]+ '}'
     ;
 PADDING
     : '_' +
@@ -125,10 +137,6 @@ RETURN_TAG
     : 'return'
     ;
 
-fragment SChar
-    : ~["\\]
-    | '\\' ["brtn\\]
-    ;
 
 package options{root=true;}
     : (package_content COMMA?) +
